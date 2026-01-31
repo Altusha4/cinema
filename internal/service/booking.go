@@ -1,22 +1,21 @@
 package service
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
-func CalculateFinalPrice(basePrice float64, ticketType string, promoCode string) float64 {
-	price := basePrice
-
-	if ticketType == "student" {
-		price = basePrice * 0.8
-		fmt.Println("Applied student discount: 20%")
+func CalculatePrice(base float64, isStudent bool) float64 {
+	if isStudent {
+		return base * 0.8
 	}
+	return base
+}
 
-	if promoCode == "CINEMA2026" {
-		price -= 500
-		fmt.Println("Applied promo code discount: -500₸")
-	}
-
-	if price < 0 {
-		return 0
-	}
-	return price
+func SendAsyncNotification(email string, movieTitle string) {
+	go func() {
+		fmt.Printf("[SYSTEM] Goroutine started: Processing ticket for %s...\n", email)
+		time.Sleep(5 * time.Second)
+		fmt.Printf("[SYSTEM] SUCCESS: Email notification for '%s' sent to %s\n", movieTitle, email)
+	}()
 }

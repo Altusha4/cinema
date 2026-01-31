@@ -1,30 +1,34 @@
 package models
 
-import "time"
+import "sync"
 
 type Movie struct {
-	TMDBID        string   `json:"tmdb_id"`
-	Title         string   `json:"title"`
-	AgeRating     int      `json:"age_rating"`
-	TrailerURL    string   `json:"trailer_url"`
-	StaticReviews []string `json:"static_reviews"`
-}
-
-type Session struct {
-	ID             string    `json:"id"`
-	MovieID        string    `json:"movie_id"`
-	CinemaName     string    `json:"cinema_name"`
-	StartTime      time.Time `json:"start_time"`
-	AvailableSeats []string  `json:"available_seats"`
-	BasePrice      float64   `json:"base_price"`
+	ID       int    `json:"id"`
+	Title    string `json:"title"`
+	Overview string `json:"overview"`
 }
 
 type Order struct {
-	ID            string  `json:"id"`
-	SessionID     string  `json:"session_id"`
-	CustomerPhone string  `json:"customer_phone"`
+	ID            int     `json:"id"`
 	CustomerEmail string  `json:"customer_email"`
-	SeatNumber    string  `json:"seat_number"`
-	TicketType    string  `json:"ticket_type"`
+	MovieTitle    string  `json:"movie_title"`
 	FinalPrice    float64 `json:"final_price"`
+}
+
+var (
+	orders      []Order
+	ordersMutex sync.Mutex
+)
+
+func SaveOrder(o Order) {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
+	o.ID = len(orders) + 1
+	orders = append(orders, o)
+}
+
+func GetAllOrders() []Order {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
+	return orders
 }
