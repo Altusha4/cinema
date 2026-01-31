@@ -1,18 +1,37 @@
 package api
 
 import (
-    "fmt"
-    "cinema/internal/models"
+	"cinema/internal/models"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
 )
 
-// FetchMovieDetails retrieves posters and trailers from TMDb API
+const baseURL = "https://api.themoviedb.org/3/movie/"
+
 func FetchMovieDetails(tmdbID string) (*models.Movie, error) {
-    // This is a skeleton for Assignment 3
-    fmt.Printf("Fetching data for movie ID: %s from TMDb...\n", tmdbID)
-    
-    // In Milestone 2, we will implement actual http.Get requests
-    return &models.Movie{
-        TMDBID: tmdbID,
-        Title:  "Sample Movie from API",
-    }, nil
+	apiKey := os.Getenv("TMDB_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("TMDB_API_KEY is missing in environment variables")
+	}
+
+	url := fmt.Sprintf("%s%s?api_key=%s&language=en-US", baseURL, tmdbID, apiKey)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDb API returned status: %d", resp.StatusCode)
+	}
+
+	var movie models.Movie
+	if err := json.NewDecoder(resp.Body).Decode(&movie); err != nil {
+		return nil, err
+	}
+
+	return &movie, nil
 }

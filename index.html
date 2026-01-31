@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CinemaGo - Milestone 2</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        .card { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        pre { background: #eee; padding: 10px; font-size: 12px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+<h1>🎬 CinemaGo Demo</h1>
+
+<div class="card">
+    <h3>1. Find Movie (TMDb)</h3>
+    <input type="text" id="mId" value="157336">
+    <button onclick="fetchMovie()">Get Details</button>
+    <pre id="movieOut"></pre>
+</div>
+
+<div class="card">
+    <h3>2. Book Ticket (Goroutine)</h3>
+    <input type="email" id="email" placeholder="email@test.com">
+    <button onclick="book()">Book Now</button>
+    <p id="bookOut"></p>
+</div>
+
+<script>
+    async function fetchMovie() {
+        const id = document.getElementById('mId').value;
+        const res = await fetch(`/movies?id=${id}`);
+        const data = await res.json();
+        document.getElementById('movieOut').innerText = JSON.stringify(data, null, 2);
+    }
+
+    async function book() {
+        const email = document.getElementById('email').value;
+        const movie_id = document.getElementById('mId').value;
+        const res = await fetch('/book', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, movie_id, is_student: true })
+        });
+        const data = await res.json();
+        document.getElementById('bookOut').innerText = "Status: " + data.status + ". Watch Terminal!";
+    }
+</script>
+</body>
+</html>

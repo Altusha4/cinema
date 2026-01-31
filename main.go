@@ -15,7 +15,7 @@ import (
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system variables")
+		log.Println("Note: No .env file found, using system environment variables")
 	}
 
 	port := os.Getenv("PORT")
@@ -23,12 +23,17 @@ func main() {
 		port = "8080"
 	}
 
+	http.HandleFunc("/", serveFrontend)
 	http.HandleFunc("/movies", getMovieHandler)
 	http.HandleFunc("/book", createBookingHandler)
 	http.HandleFunc("/orders", listOrdersHandler)
 
 	fmt.Printf("CinemaGo Server started at http://localhost:%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func serveFrontend(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "index.html")
 }
 
 func getMovieHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +55,7 @@ func getMovieHandler(w http.ResponseWriter, r *http.Request) {
 
 func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Use POST", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed. Use POST.", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -61,7 +66,7 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
 
@@ -88,7 +93,7 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "Success",
 		"order":  newOrder,
-		"note":   "Check console for background goroutine output",
+		"note":   "Ticket processing in background. Check terminal.",
 	})
 }
 
