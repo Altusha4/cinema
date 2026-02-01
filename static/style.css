@@ -1,0 +1,138 @@
+:root {
+    /* Твоя новая палитра */
+    --color-primary: #8EE4AF;   /* Светло-зеленый */
+    --color-secondary: #EDF5E1; /* Кремовый/Светлый */
+    --color-accent: #5CDB95;    /* Насыщенный зеленый */
+    --color-muted: #907163;     /* Древесный коричневый */
+    --color-dark: #379683;      /* Глубокий бирюзово-зеленый */
+
+    --bg: var(--color-secondary);
+    --card-bg: #ffffff;
+    --text-main: #2d3436;
+    --text-light: #ffffff;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg);
+    color: var(--text-main);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+h1 {
+    text-align: center;
+    color: var(--color-dark);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: 2px solid var(--color-primary);
+    padding: 30px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    box-shadow: 10px 10px 0px var(--color-primary); /* Стильный ретро-эффект тени */
+}
+
+h3 {
+    margin-top: 0;
+    color: var(--color-muted);
+    border-bottom: 2px dashed var(--color-primary);
+    padding-bottom: 10px;
+}
+
+input {
+    background: var(--color-secondary);
+    border: 2px solid var(--color-primary);
+    padding: 12px 16px;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 8px 0;
+    font-size: 1rem;
+    color: var(--color-muted);
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background: #fff;
+}
+
+button {
+    background-color: var(--color-dark);
+    color: var(--text-light);
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+button:hover {
+    background-color: var(--color-accent);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(92, 219, 149, 0.4);
+}
+
+pre {
+    background: var(--color-muted);
+    color: var(--color-secondary);
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th {
+    background-color: var(--color-primary);
+    color: var(--color-muted);
+    padding: 15px;
+    text-align: left;
+    border-radius: 10px 10px 0 0;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid var(--color-primary);
+}
+
+.status-badge {
+    background: var(--color-accent);
+    color: var(--text-light);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.student-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: var(--color-muted);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.student-option input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--color-dark);
+}

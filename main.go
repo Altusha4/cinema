@@ -9,19 +9,28 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		log.Printf("🔔 [%s] %s %v", r.Method, r.URL.Path, time.Since(start))
+	})
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("Note: No .env file found, using system environment variables")
+		log.Println("Note: Using system environment variables")
 	}
 
 	if err := service.ConnectMongo(); err != nil {
-		log.Println("Mongo disabled:", err)
+		log.Println("Mongo disabled (falling back to In-memory):", err)
 	} else {
-		log.Println("Mongo connected!")
+		log.Println("Connected to MongoDB Atlas!")
 	}
 
 	port := os.Getenv("PORT")
@@ -29,13 +38,19 @@ func main() {
 		port = "8080"
 	}
 
-	http.HandleFunc("/", serveFrontend)
-	http.HandleFunc("/movies", getMovieHandler)
-	http.HandleFunc("/book", createBookingHandler)
-	http.HandleFunc("/orders", listOrdersHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", serveFrontend)
 
-	fmt.Printf("CinemaGo Server started at http://localhost:%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	fileServer := http.FileServer(http.Dir("./static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
+
+	mux.HandleFunc("/movies", getMovieHandler)
+	mux.HandleFunc("/book", createBookingHandler)
+	mux.HandleFunc("/orders", listOrdersHandler)
+
+	fmt.Printf("CinemaGo Server running at http://localhost:%s\n", port)
+
+	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
 }
 
 func serveFrontend(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +91,13 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !service.ValidateBooking(input.Email) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Email is required!"})
+		return
+	}
+
 	movie, err := api.FetchMovieDetails(input.MovieID)
 	movieTitle := "Unknown Movie"
 	if err == nil {
@@ -90,7 +112,10 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		FinalPrice:    finalPrice,
 	}
 
-	models.SaveOrder(newOrder)
+	err = models.SaveOrderMongo(newOrder)
+	if err != nil {
+		log.Println("Database error:", err)
+	}
 
 	service.SendAsyncNotification(input.Email, movieTitle)
 
@@ -99,11 +124,15 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "Success",
 		"order":  newOrder,
-		"note":   "Ticket processing in background. Check terminal.",
 	})
 }
 
 func listOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.GetAllOrders())
+
+	orders, err := models.GetAllOrdersMongo()
+	if err != nil {
+		orders = []models.Order{}
+	}
+	json.NewEncoder(w).Encode(orders)
 }

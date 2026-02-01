@@ -1,56 +1,44 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CinemaGo - Milestone 2 Demo</title>
-    <style>
-        :root { --primary: #007bff; --bg: #f4f7f6; --text: #333; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-        h1 { text-align: center; color: var(--primary); }
-        .card { background: #fff; border: none; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        h3 { margin-top: 0; color: #555; border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
-        input, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
-        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.3s ease; }
-        button:hover { background: #0056b3; }
-        pre { background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 8px; font-size: 13px; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        th { background-color: #f8f9fa; color: #666; }
-        .status-badge { background: #e1f5fe; color: #01579b; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .student-option { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 14px; }
-        .student-option input { width: auto; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinemaGo | Organic Design</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<h1>🎬 CinemaGo Project</h1>
+<h1>CinemaGo App</h1>
 
 <div class="card">
-    <h3>1. Find Movie (External API)</h3>
-    <p style="font-size: 0.9em; color: #777;">Enter TMDb Movie ID (e.g., 157336 for Interstellar)</p>
+    <h3>🎬 Film Database</h3>
+    <p class="helper-text" style="font-size: 0.8rem; color: #907163; margin-bottom: 5px;">Enter TMDb Movie ID</p>
     <input type="text" id="mId" value="157336">
-    <button onclick="fetchMovie()">Get Movie Details</button>
-    <pre id="movieOut">Movie details will appear here...</pre>
+    <button onclick="fetchMovie()" style="width: 100%">Explore Movie</button>
+    <pre id="movieOut">Information will appear here...</pre>
 </div>
 
 <div class="card">
-    <h3>2. Book Ticket (Goroutine & DB)</h3>
-    <input type="email" id="email" placeholder="enter-your-email@example.com">
-    <div class="student-option">
+    <h3>🎫 Ticket Reservation</h3>
+    <input type="email" id="email" placeholder="student@aitu.edu.kz">
+
+    <label class="student-option">
         <input type="checkbox" id="is_student" checked>
-        <span>Apply Student Discount (20%)</span>
-    </div>
-    <button onclick="book()">Confirm Booking</button>
-    <p id="bookOut" style="text-align: center; font-weight: bold; color: var(--primary);"></p>
+        <span>Student Status (Discount Applied)</span>
+    </label>
+
+    <button onclick="book()" style="width: 100%">Confirm Order</button>
+    <p id="bookOut"></p>
 </div>
 
 <div class="card">
-    <h3>3. Real-time Orders List</h3>
+    <h3>📋 Recent Bookings</h3>
     <table>
         <thead>
         <tr>
-            <th>ID</th>
+            <th>Ref</th>
             <th>Movie</th>
-            <th>Email</th>
+            <th>Customer</th>
             <th>Price</th>
         </tr>
         </thead>
@@ -59,75 +47,6 @@
     </table>
 </div>
 
-<script>
-    async function fetchMovie() {
-        const id = document.getElementById('mId').value;
-        try {
-            const res = await fetch(`/movies?id=${id}`);
-            const data = await res.json();
-            document.getElementById('movieOut').innerText = JSON.stringify(data, null, 2);
-        } catch (err) {
-            document.getElementById('movieOut').innerText = "Error fetching movie details.";
-        }
-    }
-    async function loadOrders() {
-        try {
-            const res = await fetch('/orders');
-            const orders = await res.json();
-            const tbody = document.getElementById('orderList');
-
-            if (orders && orders.length > 0) {
-                tbody.innerHTML = orders.map(o => `
-                        <tr>
-                            <td>#${o.id}</td>
-                            <td><strong>${o.movie_title}</strong></td>
-                            <td>${o.customer_email}</td>
-                            <td><span class="status-badge">${o.final_price} ₸</span></td>
-                        </tr>
-                    `).join('');
-            } else {
-                tbody.innerHTML = "<tr><td colspan='4' style='text-align:center'>No orders yet.</td></tr>";
-            }
-        } catch (err) {
-            console.error("Failed to load orders");
-        }
-    }
-
-    async function book() {
-        const email = document.getElementById('email').value;
-        const movie_id = document.getElementById('mId').value;
-        const is_student = document.getElementById('is_student').checked;
-        const out = document.getElementById('bookOut');
-
-        if (!email) {
-            alert("Please enter email!");
-            return;
-        }
-
-        out.innerText = "Processing...";
-
-        try {
-            const res = await fetch('/book', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, movie_id, is_student })
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                out.innerText = "Success! Check terminal for goroutine logs.";
-                loadOrders();
-            } else {
-                out.innerText = "Error: " + (data.error || "Unknown error");
-            }
-        } catch (err) {
-            out.innerText = "Failed to connect to server.";
-        }
-    }
-
-    setInterval(loadOrders, 5000);
-    loadOrders();
-</script>
+<script src="/static/script.js"></script>
 </body>
 </html>
