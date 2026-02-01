@@ -18,7 +18,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
-		log.Printf("🔔 [%s] %s %v", r.Method, r.URL.Path, time.Since(start))
+		log.Printf("[%s] %s %v", r.Method, r.URL.Path, time.Since(start))
 	})
 }
 
@@ -40,7 +40,6 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", serveFrontend)
-
 	fileServer := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
@@ -59,18 +58,26 @@ func serveFrontend(w http.ResponseWriter, r *http.Request) {
 
 func getMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
-	if id == "" {
-		id = "157336"
+	title := r.URL.Query().Get("title")
+
+	var movie *models.Movie
+	var err error
+
+	if title != "" {
+		movie, err = api.SearchMovieByName(title)
+	} else {
+		if id == "" {
+			id = "157336"
+		}
+		movie, err = api.FetchMovieDetails(id)
 	}
 
-	movie, err := api.FetchMovieDetails(id)
+	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Movie not found: " + err.Error()})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(movie)
 }
 
@@ -94,11 +101,19 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	if !service.ValidateBooking(input.Email) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Email is required!"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Valid email is required!"})
 		return
 	}
 
-	movie, err := api.FetchMovieDetails(input.MovieID)
+	var movie *models.Movie
+	var err error
+
+	if _, checkErr := fmt.Sscan(input.MovieID, new(int)); checkErr == nil {
+		movie, err = api.FetchMovieDetails(input.MovieID)
+	} else {
+		movie, err = api.SearchMovieByName(input.MovieID)
+	}
+
 	movieTitle := "Unknown Movie"
 	if err == nil {
 		movieTitle = movie.Title
