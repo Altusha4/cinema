@@ -5,28 +5,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 )
 
-const baseURL = "https://api.themoviedb.org/3/movie/"
+const (
+	baseURL   = "https://api.themoviedb.org/3/movie/"
+	searchURL = "https://api.themoviedb.org/3/search/movie"
+)
 
 func FetchMovieDetails(tmdbID string) (*models.Movie, error) {
 	apiKey := os.Getenv("TMDB_API_KEY")
 	if apiKey == "" {
-		return nil, fmt.Errorf("TMDB_API_KEY is missing in environment variables")
+		return nil, fmt.Errorf("TMDB_API_KEY is missing")
 	}
 
-	url := fmt.Sprintf("%s%s?api_key=%s&language=en-US", baseURL, tmdbID, apiKey)
+	apiURL := fmt.Sprintf("%s%s?api_key=%s&language=en-US", baseURL, tmdbID, apiKey)
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(apiURL)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("TMDb API returned status: %d", resp.StatusCode)
-	}
 
 	var movie models.Movie
 	if err := json.NewDecoder(resp.Body).Decode(&movie); err != nil {
@@ -34,4 +34,34 @@ func FetchMovieDetails(tmdbID string) (*models.Movie, error) {
 	}
 
 	return &movie, nil
+}
+
+func SearchMovieByName(title string) (*models.Movie, error) {
+	apiKey := os.Getenv("TMDB_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("TMDB_API_KEY is missing")
+	}
+
+	safeTitle := url.QueryEscape(title)
+	apiURL := fmt.Sprintf("%s?api_key=%s&query=%s&language=en-US", searchURL, apiKey, safeTitle)
+
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var searchResult struct {
+		Results []models.Movie `json:"results"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&searchResult); err != nil {
+		return nil, err
+	}
+
+	if len(searchResult.Results) == 0 {
+		return nil, fmt.Errorf("movie not found")
+	}
+
+	return &searchResult.Results[0], nil
 }
