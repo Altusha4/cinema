@@ -18,6 +18,12 @@ func main() {
 		log.Println("Note: No .env file found, using system environment variables")
 	}
 
+	if err := service.ConnectMongo(); err != nil {
+		log.Println("Mongo disabled:", err)
+	} else {
+		log.Println("Mongo connected!")
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
