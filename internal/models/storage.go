@@ -116,3 +116,9 @@ func GetOrderCount() int {
 	defer mu.RUnlock()
 	return len(orders)
 }
+
+func GetMovieCount() int {
+	mu.RLock()
+	defer mu.RUnlock()
+	return len(movies)
+}
