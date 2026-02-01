@@ -18,3 +18,6 @@ func SendAsyncNotification(email string, movieTitle string) {
 		fmt.Printf("[SYSTEM] SUCCESS: Email notification for '%s' sent to %s\n", movieTitle, email)
 	}()
 }
+func ValidateBooking(email string) bool {
+	return email != ""
+}
