@@ -11,7 +11,6 @@ func CalculatePrice(base float64, isStudent bool) float64 {
 	}
 	return base
 }
-
 func SendAsyncNotification(email string, movieTitle string) {
 	go func() {
 		fmt.Printf("[SYSTEM] Goroutine started: Processing ticket for %s...\n", email)
