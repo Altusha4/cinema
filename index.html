@@ -1,52 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>CinemaGo - Milestone 2</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-        .card { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0056b3; }
-        pre { background: #eee; padding: 10px; font-size: 12px; overflow-x: auto; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinemaGo | Organic Design</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<h1>🎬 CinemaGo Demo</h1>
+<h1>CinemaGo App</h1>
 
 <div class="card">
-    <h3>1. Find Movie (TMDb)</h3>
-    <input type="text" id="mId" value="157336">
-    <button onclick="fetchMovie()">Get Details</button>
-    <pre id="movieOut"></pre>
+    <h3>🎬 Film Database</h3>
+    <p class="helper-text" style="font-size: 0.8rem; color: #907163; margin-bottom: 10px;">
+        Enter Movie Title (e.g., Inception) or TMDb ID
+    </p>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <input type="text" id="mId" value="Interstellar" style="margin: 0; flex-grow: 1;">
+        <button onclick="fetchMovie()" style="width: auto; margin: 0; padding: 0 25px;">Search</button>
+    </div>
+
+    <div id="movieDetails" class="movie-flex" style="display: none;">
+        <div class="poster-side">
+            <img id="moviePoster" src="" alt="Movie Poster">
+        </div>
+        <div class="info-side">
+            <h2 id="displayTitle" style="margin: 0; color: var(--color-dark);"></h2>
+            <p id="displayRelease" style="color: var(--color-muted); font-weight: bold; font-size: 0.9rem; margin: 5px 0 15px 0;"></p>
+            <p id="displayOverview" style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 15px;"></p>
+            <div style="display: flex; gap: 8px;">
+                <span id="displayId" class="status-badge" style="background: var(--color-secondary); color: var(--color-muted);"></span>
+            </div>
+        </div>
+    </div>
+
+    <details style="margin-top: 20px; cursor: pointer;">
+        <summary style="font-size: 0.8rem; color: var(--color-muted);">View Raw JSON Response</summary>
+        <pre id="movieOut" style="margin-top: 10px; font-size: 0.75rem;"></pre>
+    </details>
 </div>
 
 <div class="card">
-    <h3>2. Book Ticket (Goroutine)</h3>
-    <input type="email" id="email" placeholder="email@test.com">
-    <button onclick="book()">Book Now</button>
-    <p id="bookOut"></p>
+    <h3>🎫 Ticket Reservation</h3>
+    <input type="email" id="email" placeholder="student@aitu.edu.kz">
+
+    <label class="student-option">
+        <input type="checkbox" id="is_student" checked>
+        <span>Student Status (Discount Applied)</span>
+    </label>
+
+    <button onclick="book()" style="width: 100%; background-color: var(--color-dark);">Confirm Order</button>
+    <p id="bookOut" style="text-align: center; font-weight: bold; margin-top: 15px; min-height: 1.2em;"></p>
 </div>
 
-<script>
-    async function fetchMovie() {
-        const id = document.getElementById('mId').value;
-        const res = await fetch(`/movies?id=${id}`);
-        const data = await res.json();
-        document.getElementById('movieOut').innerText = JSON.stringify(data, null, 2);
-    }
+<div class="card">
+    <h3>📋 Recent Bookings</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>Ref</th>
+            <th>Movie</th>
+            <th>Customer</th>
+            <th>Price</th>
+        </tr>
+        </thead>
+        <tbody id="orderList">
+        </tbody>
+    </table>
+</div>
 
-    async function book() {
-        const email = document.getElementById('email').value;
-        const movie_id = document.getElementById('mId').value;
-        const res = await fetch('/book', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, movie_id, is_student: true })
-        });
-        const data = await res.json();
-        document.getElementById('bookOut').innerText = "Status: " + data.status + ". Watch Terminal!";
-    }
-</script>
+<script src="/static/script.js"></script>
 </body>
 </html>
