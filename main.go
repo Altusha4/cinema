@@ -46,6 +46,9 @@ func main() {
 	mux.HandleFunc("/movies", getMovieHandler)
 	mux.HandleFunc("/book", createBookingHandler)
 	mux.HandleFunc("/orders", listOrdersHandler)
+	mux.HandleFunc("/sessions", sessionsHandler)
+	mux.HandleFunc("/reserve", reserveSeatHandler)
+
 
 	fmt.Printf("CinemaGo Server running at http://localhost:%s\n", port)
 
@@ -150,4 +153,70 @@ func listOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		orders = []models.Order{}
 	}
 	json.NewEncoder(w).Encode(orders)
+}
+
+func sessionsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		maxPriceStr := r.URL.Query().Get("max_price")
+		onlyStr := r.URL.Query().Get("only_with_seats")
+
+		var maxPrice float64
+		if maxPriceStr != "" {
+			fmt.Sscanf(maxPriceStr, "%f", &maxPrice)
+		}
+
+		onlyWithSeats := (onlyStr == "true" || onlyStr == "1")
+
+		list := models.FilterSessions(maxPrice, onlyWithSeats)
+		json.NewEncoder(w).Encode(list)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var s models.Session
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+		created := models.AddSession(s)
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(created)
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+func reserveSeatHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		SessionID int    `json:"session_id"`
+		Seat      string `json:"seat"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := models.ReserveSeat(input.SessionID, input.Seat); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	s, ok := models.GetSessionByID(input.SessionID)
+	w.Header().Set("Content-Type", "application/json")
+	if !ok {
+		json.NewEncoder(w).Encode(map[string]string{"status": "reserved"})
+		return
+	}
+	json.NewEncoder(w).Encode(s)
 }
