@@ -91,7 +91,9 @@ func getMovieHandler(w http.ResponseWriter, r *http.Request) {
 
 func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed. Use POST."})
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{
+			"error": "Method not allowed. Use POST.",
+		})
 		return
 	}
 
@@ -99,6 +101,7 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		Email     string `json:"email"`
 		MovieID   string `json:"movie_id"`
 		IsStudent bool   `json:"is_student"`
+		Age       int    `json:"age"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -111,15 +114,30 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	movieTitle := "Unknown Movie"
+	var (
+		movie *models.Movie
+		err   error
+	)
+
 	if _, convErr := strconv.Atoi(input.MovieID); convErr == nil {
-		if movie, err := api.FetchMovieDetails(input.MovieID); err == nil && movie != nil {
-			movieTitle = movie.Title
-		}
+		movie, err = api.FetchMovieDetails(input.MovieID)
 	} else {
-		if movie, err := api.SearchMovieByName(input.MovieID); err == nil && movie != nil {
-			movieTitle = movie.Title
-		}
+		movie, err = api.SearchMovieByName(input.MovieID)
+	}
+	if err != nil {
+		log.Println("TMDb error:", err)
+	}
+
+	movieTitle := "Unknown Movie"
+	if movie != nil && movie.Title != "" {
+		movieTitle = movie.Title
+	}
+
+	if movie != nil && movie.Adult && input.Age < 18 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "This movie is 18+. Booking is not allowed for minors.",
+		})
+		return
 	}
 
 	finalPrice := service.CalculatePrice(2000.0, input.IsStudent)

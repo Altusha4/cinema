@@ -6,6 +6,8 @@ type Movie struct {
 	Overview    string `json:"overview" bson:"overview"`
 	PosterPath  string `json:"poster_path" bson:"poster_path"`
 	ReleaseDate string `json:"release_date" bson:"release_date"`
+
+	Adult bool `json:"adult" bson:"adult"`
 }
 
 type Session struct {
@@ -22,3 +24,4 @@ type Order struct {
 	MovieTitle    string  `json:"movie_title" bson:"movie_title"`
 	FinalPrice    float64 `json:"final_price" bson:"final_price"`
 }
+
