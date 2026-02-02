@@ -43,6 +43,15 @@ func OrdersCollection() *mongo.Collection {
 	return MongoDB.Collection("orders")
 }
 
+func SessionsCollection() *mongo.Collection {
+	return MongoDB.Collection("sessions")
+}
+
+func CountersCollection() *mongo.Collection {
+	return MongoDB.Collection("counters")
+}
+
 func MoviesCollection() *mongo.Collection {
 	return MongoDB.Collection("movies")
 }
+
