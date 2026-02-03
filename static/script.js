@@ -3,6 +3,8 @@ let currentMovie = {
     title: "Interstellar"
 };
 
+let currentSession = null;
+
 async function fetchMovie() {
     const query = document.getElementById('mId').value.trim();
     const movieDetails = document.getElementById('movieDetails');
@@ -60,6 +62,56 @@ async function fetchMovie() {
     }
 }
 
+loadSessions(currentMovie.id);
+
+async function loadSessions(movieId, query = "") {
+    const card = document.getElementById("sessionsCard");
+    const list = document.getElementById("sessionsList");
+
+    list.innerHTML = "Loading sessions...";
+    card.style.display = "block";
+
+    try {
+        const url = query
+            ? `/sessions?movie_id=${movieId}&${query}`
+            : `/sessions?movie_id=${movieId}`;
+
+        const res = await fetch(url);
+        if (!res.ok) {
+            list.innerHTML = "<p>No sessions available.</p>";
+            return;
+        }
+
+        const sessions = await res.json();
+
+        if (!sessions.length) {
+            list.innerHTML = "<p>No sessions available.</p>";
+            return;
+        }
+
+        list.innerHTML = sessions.map(s => `
+            <div class="session-item">
+                <div>
+                    <strong>Session #${s.id}</strong><br>
+                    💰 ${s.base_price} ₸ |
+                    🎟️ ${s.available_seats.length} seats
+                </div>
+                <button onclick="selectSession(${s.id})">
+                    Book
+                </button>
+            </div>
+        `).join("");
+
+    } catch (e) {
+        list.innerHTML = "<p>Error loading sessions.</p>";
+    }
+}
+
+function selectSession(sessionId) {
+    currentSession = sessionId;
+    alert("Session selected. Now you can proceed to booking.");
+}
+
 async function loadOrders() {
     try {
         const res = await fetch('/orders');
@@ -87,15 +139,29 @@ async function loadOrders() {
 
 async function book() {
     const email = document.getElementById('email').value.trim();
+    const age = Number(document.getElementById('age').value);
+    const seat = document.getElementById('seat').value.trim().toUpperCase();
     const is_student = document.getElementById('is_student').checked;
     const out = document.getElementById('bookOut');
 
-    if (!email) {
-        alert("Please enter your email!");
+    if (!currentSession) {
+        alert("Please select a session first!");
         return;
     }
 
-    out.innerText = `⚡ Booking "${currentMovie.title}"...`;
+    if (!email || !seat || !age) {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    // 🔞 age check (frontend)
+    if (age < 18) {
+        out.innerText = "❌ Booking denied: age restriction (18+)";
+        out.style.color = "#d63031";
+        return;
+    }
+
+    out.innerText = "⏳ Processing booking...";
     out.style.color = "#907163";
 
     try {
@@ -103,27 +169,50 @@ async function book() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email: email,
-                movie_id: currentMovie.id,
-                is_student: is_student
+                email,
+                session_id: currentSession,
+                seat,
+                is_student,
+                age
             })
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            out.innerText = `Success! Reserved: ${currentMovie.title}`;
+            out.innerText = `✅ Seat ${seat} reserved successfully`;
             out.style.color = "#379683";
-            loadOrders();
-            document.getElementById('email').value = "";
+
+            // обновляем сессии (место убралось)
+            loadSessions(currentMovie.id);
+
+            document.getElementById('seat').value = "";
+            document.getElementById('age').value = "";
         } else {
-            out.innerText = "Error: " + (data.error || "Booking failed");
+            out.innerText = "❌ " + (data.error || "Booking failed");
             out.style.color = "#d63031";
         }
+
     } catch (err) {
-        out.innerText = "Connection lost.";
+        out.innerText = "❌ Server connection error";
         out.style.color = "#d63031";
     }
+}
+
+async function applyFilters() {
+    const maxPrice = document.getElementById("maxPrice").value;
+    const onlyWithSeats = document.getElementById("onlyWithSeats").checked;
+
+    const params = new URLSearchParams();
+
+    if (maxPrice) {
+        params.append("max_price", maxPrice);
+    }
+    if (onlyWithSeats) {
+        params.append("only_with_seats", "true");
+    }
+
+    loadSessions(currentMovie.id, params.toString());
 }
 
 setInterval(loadOrders, 5000);

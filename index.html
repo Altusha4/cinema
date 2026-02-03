@@ -35,6 +35,30 @@
         </div>
     </div>
 
+    <div class="card" id="sessionsCard" style="display:none;">
+        <h3>🕒 Available Sessions</h3>
+        <div class="filters">
+            <input
+                type="number"
+                id="maxPrice"
+                placeholder="Max price (₸)"
+                min="0"
+            >
+
+            <label class="student-option">
+                <input type="checkbox" id="onlyWithSeats">
+                <span>Only with available seats</span>
+            </label>
+
+            <button onclick="applyFilters()">Apply filters</button>
+        </div>
+
+        <div id="sessionsList" class="sessions-list">
+        <!-- sessions will be rendered here -->
+        </div>
+    </div>
+
+
     <details style="margin-top: 20px; cursor: pointer;">
         <summary style="font-size: 0.8rem; color: var(--color-muted);">View Raw JSON Response</summary>
         <pre id="movieOut" style="margin-top: 10px; font-size: 0.75rem;"></pre>
@@ -44,6 +68,19 @@
 <div class="card">
     <h3>🎫 Ticket Reservation</h3>
     <input type="email" id="email" placeholder="student@aitu.edu.kz">
+
+    <input
+        type="number"
+        id="age"
+        placeholder="Your age"
+        min="0"
+    >
+
+    <input
+        type="text"
+        id="seat"
+        placeholder="Seat (e.g. A2)"
+    >
 
     <label class="student-option">
         <input type="checkbox" id="is_student" checked>
