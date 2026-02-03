@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -99,62 +98,77 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		Email     string `json:"email"`
-		MovieID   string `json:"movie_id"`
+		SessionID int    `json:"session_id"`
+		Seat      string `json:"seat"`
 		IsStudent bool   `json:"is_student"`
 		Age       int    `json:"age"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON input"})
-		return
-	}
-
-	if !service.ValidateBooking(input.Email) {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Valid email is required!"})
-		return
-	}
-
-	var (
-		movie *models.Movie
-		err   error
-	)
-
-	if _, convErr := strconv.Atoi(input.MovieID); convErr == nil {
-		movie, err = api.FetchMovieDetails(input.MovieID)
-	} else {
-		movie, err = api.SearchMovieByName(input.MovieID)
-	}
-	if err != nil {
-		log.Println("TMDb error:", err)
-	}
-
-	movieTitle := "Unknown Movie"
-	if movie != nil && movie.Title != "" {
-		movieTitle = movie.Title
-	}
-
-	if movie != nil && movie.Adult && input.Age < 18 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "This movie is 18+. Booking is not allowed for minors.",
+			"error": "Invalid JSON input",
 		})
 		return
 	}
 
-	finalPrice := service.CalculatePrice(2000.0, input.IsStudent)
+	if !service.ValidateBooking(input.Email) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Valid email is required",
+		})
+		return
+	}
 
+	// 1️⃣ Получаем сессию из Mongo
+	session, ok, err := models.GetSessionByIDMongo(input.SessionID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error": "Session not found",
+		})
+		return
+	}
+
+	// 2️⃣ Проверка возраста (упрощённая)
+	if input.Age < 18 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "18+ sessions only",
+		})
+		return
+	}
+
+	// 3️⃣ Резервируем место
+	_, err = models.ReserveSeatMongo(input.SessionID, input.Seat)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// 4️⃣ Считаем цену от сессии
+	finalPrice := service.CalculatePrice(session.BasePrice, input.IsStudent)
+
+	// 5️⃣ Создаём заказ — БЕЗ Unknown Movie
 	order := models.Order{
 		CustomerEmail: input.Email,
-		MovieTitle:    movieTitle,
+		MovieTitle:    session.MovieTitle,
 		FinalPrice:    finalPrice,
 	}
 
 	saved, err := models.SaveOrderMongo(order)
 	if err != nil {
-		log.Println("Database error:", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "db error"})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Database error",
+		})
 		return
 	}
 
+	// 6️⃣ Асинхронное уведомление
 	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle)
 
 	writeJSON(w, http.StatusCreated, map[string]any{
