@@ -118,7 +118,6 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1️⃣ Получаем сессию из Mongo
 	session, ok, err := models.GetSessionByIDMongo(input.SessionID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{
@@ -133,7 +132,6 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2️⃣ Проверка возраста (упрощённая)
 	if input.Age < 18 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "18+ sessions only",
@@ -141,7 +139,6 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3️⃣ Резервируем место
 	_, err = models.ReserveSeatMongo(input.SessionID, input.Seat)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
@@ -150,10 +147,8 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4️⃣ Считаем цену от сессии
 	finalPrice := service.CalculatePrice(session.BasePrice, input.IsStudent)
 
-	// 5️⃣ Создаём заказ — БЕЗ Unknown Movie
 	order := models.Order{
 		CustomerEmail: input.Email,
 		MovieTitle:    session.MovieTitle,
@@ -168,7 +163,6 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6️⃣ Асинхронное уведомление
 	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle)
 
 	writeJSON(w, http.StatusCreated, map[string]any{
