@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Movie struct {
 	ID          int    `json:"id" bson:"id"`
 	Title       string `json:"title" bson:"title"`
@@ -16,6 +18,10 @@ type Session struct {
 	MovieTitle     string   `json:"movie_title" bson:"movie_title"`
 	BasePrice      float64  `json:"base_price" bson:"base_price"`
 	AvailableSeats []string `json:"available_seats" bson:"available_seats"`
+
+	CinemaName string    `json:"cinema_name" bson:"cinema_name"`
+	Hall       string    `json:"hall,omitempty" bson:"hall,omitempty"`
+	StartTime  time.Time `json:"start_time" bson:"start_time"`
 }
 
 type Order struct {
@@ -24,4 +30,3 @@ type Order struct {
 	MovieTitle    string  `json:"movie_title" bson:"movie_title"`
 	FinalPrice    float64 `json:"final_price" bson:"final_price"`
 }
-

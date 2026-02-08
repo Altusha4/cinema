@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -27,7 +29,6 @@ func main() {
 		log.Println("Note: Using system environment variables")
 	}
 
-	// В варианте "всё хранится в Mongo" — Mongo обязательна
 	if err := service.ConnectMongo(); err != nil {
 		log.Fatal("Mongo connection failed: ", err)
 	}
@@ -181,19 +182,40 @@ func listOrdersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sessionsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	if r.Method == http.MethodGet {
+		cinema := r.URL.Query().Get("cinema")
+		date := r.URL.Query().Get("date")
 		maxPriceStr := r.URL.Query().Get("max_price")
 		onlyStr := r.URL.Query().Get("only_with_seats")
 
+		if strings.TrimSpace(date) == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "date is required in format YYYY-MM-DD (example: 2026-02-10)",
+			})
+			return
+		}
+
 		var maxPrice float64
 		if maxPriceStr != "" {
-			_, _ = fmt.Sscanf(maxPriceStr, "%f", &maxPrice)
+			if v, err := strconv.ParseFloat(maxPriceStr, 64); err == nil {
+				maxPrice = v
+			} else {
+				writeJSON(w, http.StatusBadRequest, map[string]string{
+					"error": "max_price must be a number",
+				})
+				return
+			}
 		}
+
 		onlyWithSeats := (onlyStr == "true" || onlyStr == "1")
 
-		list, err := models.FilterSessionsMongo(maxPrice, onlyWithSeats)
+		list, err := models.FilterSessionsMongo(cinema, date, maxPrice, onlyWithSeats)
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			writeJSON(w, http.StatusInternalServerError, map[string]string{
+				"error": err.Error(),
+			})
 			return
 		}
 
@@ -208,9 +230,42 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if strings.TrimSpace(s.CinemaName) == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "cinema_name is required",
+			})
+			return
+		}
+		if !models.IsCinemaAllowed(s.CinemaName) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "cinema_name is not allowed (choose one of the predefined cinemas)",
+			})
+			return
+		}
+		if s.StartTime.IsZero() {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "start_time is required (example: 2026-02-10T19:30:00+05:00)",
+			})
+			return
+		}
+		if s.BasePrice <= 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "base_price must be > 0",
+			})
+			return
+		}
+		if s.MovieID == 0 && strings.TrimSpace(s.MovieTitle) == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error": "movie_id or movie_title is required",
+			})
+			return
+		}
+
 		created, err := models.AddSessionMongo(s)
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			writeJSON(w, http.StatusInternalServerError, map[string]string{
+				"error": err.Error(),
+			})
 			return
 		}
 
