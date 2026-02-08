@@ -230,11 +230,12 @@
         <h2 style="color: #379683;">✨ Order Confirmed!</h2>
         <p>Your ticket is ready. See you at the movies!</p>
 
-        <div id="ticketDetails"></div>
+        <div id="ticketDetails" style="display: flex; justify-content: center; padding: 20px;">
+        </div>
 
         <div class="success-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
-            <button onclick="downloadTicket()" class="primary-action" style="padding: 0 30px;">📥 Download PDF</button>
-            <button onclick="location.href='/'" class="secondary" style="padding: 0 30px;">Home</button>
+            <button onclick="downloadTicket()" class="primary-action" style="padding: 12px 30px; background: #379683; color: white; border-radius: 10px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
+            <button onclick="location.href='/'" class="secondary" style="padding: 12px 30px;">Home</button>
         </div>
     </div>
 </main>
