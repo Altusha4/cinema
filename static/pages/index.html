@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinemaGo | Discover Movies</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/pages/index.html" class="logo">🎬 CinemaGo</a>
+        <div class="nav-links">
+            <a href="/pages/index.html" class="nav-link active">Movies</a>
+            <a href="/pages/sessions.html" class="nav-link">Sessions</a>
+            <a href="/pages/booking.html" class="nav-link">Booking</a>
+            <a href="/pages/admin.html" class="nav-link">Admin</a>
+        </div>
+    </nav>
+
+    <div class="card">
+        <h3>🎬 Film Database</h3>
+        <p class="helper-text">
+            Search by Movie Title (e.g., Inception) or TMDb ID
+        </p>
+
+        <div class="search-container">
+            <div class="filters">
+                <input type="text" id="movieQuery" placeholder="Enter movie title or TMDb ID..." value="Interstellar">
+                <button onclick="searchMovie()">Search Movie</button>
+            </div>
+        </div>
+
+        <div id="movieDetails" class="movie-flex" style="display: none;">
+            <div class="poster-side">
+                <img id="moviePoster" src="" alt="Movie Poster">
+            </div>
+            <div class="info-side">
+                <h2 id="movieTitle"></h2>
+                <p id="movieRelease"></p>
+                <p id="movieOverview"></p>
+                <div class="movie-meta">
+                    <span id="movieId" class="status-badge"></span>
+                    <span id="movieAdult" class="status-badge" style="background: #907163;"></span>
+                </div>
+            </div>
+        </div>
+
+        <details style="margin-top: 20px; cursor: pointer;">
+            <summary style="font-size: 0.8rem; color: var(--color-muted);">View Raw JSON Response</summary>
+            <pre id="movieJson"></pre>
+        </details>
+    </div>
+
+    <div class="card">
+        <h3>🔥 Now in Theaters</h3>
+        <div id="featuredMovies" class="movies-grid">
+            <!-- Featured movies will load here -->
+            <p>Loading featured movies...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📞 Quick Actions</h3>
+        <div class="quick-actions">
+            <button onclick="navigateTo('sessions')" class="secondary">View Sessions</button>
+            <button onclick="navigateTo('booking')">Book Tickets</button>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/movies.js"></script>
+    <script>
+        // Загрузка популярных фильмов при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFeaturedMovies();
+        });
+    </script>
+</body>
+</html>
