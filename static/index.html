@@ -19,7 +19,8 @@
     </div>
 </nav>
 
-<div class="dashboard-container">
+<main class="dashboard-container">
+
     <div class="welcome-section card">
         <div class="user-info">
             <h1>Welcome back, <span id="userName">Altynay</span>! 👋</h1>
@@ -38,135 +39,40 @@
     </div>
 
     <div class="dashboard-grid">
+
         <div class="card">
             <h3>🚀 Quick Actions</h3>
-            <div class="action-buttons">
+            <div class="action-buttons" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
                 <button onclick="location.href='/pages/index.html'">🔍 Find a Movie</button>
                 <button onclick="location.href='/pages/sessions.html'" class="secondary">📅 View Schedule</button>
             </div>
         </div>
 
-        <div class="card highlight-card">
+        <div class="card highlight-card" style="border-left: 8px solid var(--color-dark);">
             <h3>🎬 Recommended for You</h3>
             <div id="recommendationContent">
                 <p class="helper-text">Trending in Science Fiction</p>
-                <div class="mini-movie-card" onclick="location.href='/pages/index.html?id=157336'">
+                <div class="mini-movie-card" onclick="location.href='/pages/index.html?id=157336'" style="cursor: pointer; padding: 20px; background: var(--color-secondary); border-radius: 15px; transition: 0.3s; margin-top: 15px;">
                     <strong>Interstellar</strong>
-                    <span>2014 • Directed by Christopher Nolan</span>
+                    <span style="font-size: 0.85rem; color: var(--color-muted); display: block; margin-top: 5px;">2014 • Directed by Christopher Nolan</span>
                 </div>
             </div>
         </div>
+
     </div>
 
     <div class="card">
         <h3>🎫 Your Latest Bookings</h3>
-        <div id="recentOrdersContainer" class="tickets-placeholder">
+        <div id="recentOrdersContainer" class="tickets-placeholder" style="padding: 20px; text-align: center;">
             <p>Checking your recent tickets...</p>
-            <button onclick="location.href='/pages/sessions.html'" class="secondary">Book a New Ticket</button>
+            <button onclick="location.href='/pages/sessions.html'" class="secondary" style="margin-top: 15px;">Book a New Ticket</button>
         </div>
     </div>
-</div>
+</main>
 
 <script src="/static/js/app.js"></script>
 <script>
-    // Стили для Dashboard
-    const dashboardStyle = document.createElement('style');
-    dashboardStyle.textContent = `
-            .dashboard-container {
-                max-width: 900px;
-                margin: 20px auto;
-                animation: fadeIn 0.5s ease;
-            }
-            .welcome-section {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 20px;
-            }
-            .user-info h1 {
-                text-align: left;
-                margin-bottom: 5px;
-                font-size: 2rem;
-                color: var(--color-dark);
-            }
-            .user-stats {
-                display: flex;
-                gap: 15px;
-            }
-            .stat-item {
-                background: var(--color-secondary);
-                padding: 15px 20px;
-                border-radius: 15px;
-                text-align: center;
-                border: 2px solid var(--color-primary);
-                min-width: 100px;
-            }
-            .stat-value {
-                display: block;
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: var(--color-dark);
-            }
-            .stat-label {
-                font-size: 0.75rem;
-                color: var(--color-muted);
-                font-weight: 600;
-                text-transform: uppercase;
-            }
-            .dashboard-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 25px;
-                margin: 25px 0;
-            }
-            .action-buttons {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                margin-top: 15px;
-            }
-            .highlight-card {
-                border-left: 8px solid var(--color-dark);
-            }
-            .mini-movie-card {
-                margin-top: 15px;
-                padding: 20px;
-                background: var(--color-secondary);
-                border-radius: 12px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                border: 2px solid transparent;
-            }
-            .mini-movie-card:hover {
-                transform: translateY(-3px);
-                border-color: var(--color-primary);
-                background: white;
-            }
-            .mini-movie-card strong {
-                display: block;
-                color: var(--color-dark);
-                font-size: 1.1rem;
-            }
-            .tickets-placeholder {
-                text-align: center;
-                padding: 20px;
-            }
-            .order-mini-row {
-                display: flex;
-                justify-content: space-between;
-                padding: 15px;
-                border-bottom: 1px dashed var(--color-primary);
-                text-align: left;
-            }
-            @media (max-width: 768px) {
-                .welcome-section { flex-direction: column; text-align: center; }
-                .user-info h1 { text-align: center; }
-                .dashboard-grid { grid-template-columns: 1fr; }
-            }
-        `;
-    document.head.appendChild(dashboardStyle);
-
-    // Логика подгрузки последних заказов
+    // Функция для загрузки и отрисовки заказов в виде таблицы (чтобы заполнить ширину)
     async function fetchRecentOrders() {
         const container = document.getElementById('recentOrdersContainer');
         try {
@@ -174,18 +80,37 @@
             const orders = await res.json();
 
             if (orders && orders.length > 0) {
-                // Берем последние 2 заказа
-                const recent = orders.slice(-2).reverse();
-                container.innerHTML = recent.map(o => `
-                        <div class="order-mini-row">
-                            <span><strong>${o.movie_title}</strong><br><small>${o.customer_email}</small></span>
-                            <span class="status-badge">${o.seat}</span>
-                            <span class="price">${o.final_price} ₸</span>
+                // Берем последние 3 заказа для наглядности на широком экране
+                const recent = orders.slice(-3).reverse();
+
+                container.innerHTML = `
+                        <div class="table-container" style="overflow-x: auto; margin-top: 10px;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--color-primary);">
+                                        <th style="padding: 12px; color: var(--color-muted);">Movie Title</th>
+                                        <th style="padding: 12px; color: var(--color-muted);">Seat</th>
+                                        <th style="padding: 12px; color: var(--color-muted);">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${recent.map(o => `
+                                        <tr style="border-bottom: 1px solid var(--color-secondary);">
+                                            <td style="padding: 12px;"><strong>${o.movie_title}</strong></td>
+                                            <td style="padding: 12px;"><span class="status-badge" style="background: var(--color-dark);">${o.seat}</span></td>
+                                            <td style="padding: 12px; font-weight: 700;">${o.final_price} ₸</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
                         </div>
-                    `).join('') + `<button onclick="location.href='/pages/sessions.html'" class="secondary" style="margin-top:15px">Book More</button>`;
+                        <button onclick="location.href='/pages/sessions.html'" class="secondary" style="margin-top: 25px;">Book More Tickets</button>
+                    `;
             } else {
-                container.innerHTML = `<p>No active bookings found.</p>
-                        <button onclick="location.href='/pages/sessions.html'" class="secondary">Book Your First Ticket</button>`;
+                container.innerHTML = `
+                        <p style="margin-bottom: 20px;">No active bookings found.</p>
+                        <button onclick="location.href='/pages/sessions.html'" class="secondary">Book Your First Ticket</button>
+                    `;
             }
         } catch (e) {
             container.innerHTML = `<p>Connect to server to see your tickets.</p>`;
