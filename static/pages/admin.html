@@ -8,115 +8,121 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="/pages/index.html" class="logo">🎬 CinemaGo</a>
-        <div class="nav-links">
-            <a href="/pages/index.html" class="nav-link">Movies</a>
-            <a href="/pages/sessions.html" class="nav-link">Sessions</a>
-            <a href="/pages/booking.html" class="nav-link">Booking</a>
-            <a href="/pages/admin.html" class="nav-link active">Admin</a>
-        </div>
-    </nav>
+<nav class="navbar">
+    <a href="/" class="logo">🎬 CinemaGo</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/pages/index.html" class="nav-link">Search</a>
+        <a href="/pages/sessions.html" class="nav-link">Sessions</a>
+        <a href="/pages/booking.html" class="nav-link">Booking</a>
+        <a href="/pages/admin.html" class="nav-link active">Admin</a>
+    </div>
+</nav>
 
-    <h1>⚙️ Admin Panel</h1>
+<h1>⚙️ Admin Management</h1>
 
-    <div class="admin-grid">
-        <div class="card">
-            <h3>📊 Statistics</h3>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-number" id="totalOrders">0</span>
-                    <span class="stat-label">Total Orders</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number" id="totalMovies">0</span>
-                    <span class="stat-label">Movies in DB</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number" id="totalSessions">0</span>
-                    <span class="stat-label">Active Sessions</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number" id="revenue">0 ₸</span>
-                    <span class="stat-label">Total Revenue</span>
-                </div>
+<div class="admin-grid">
+    <div class="card">
+        <h3>📊 Statistics Overview</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-number" id="totalOrders">0</span>
+                <span class="stat-label">Total Orders</span>
             </div>
-        </div>
-
-        <div class="card">
-            <h3>🎭 Manage Sessions</h3>
-            <button onclick="toggleSessionForm()" class="secondary">➕ Add New Session</button>
-            
-            <div id="sessionForm" style="display: none; margin-top: 20px;">
-                <div class="form-group">
-                    <label for="movieTitle">Movie Title</label>
-                    <input type="text" id="movieTitle" placeholder="Enter movie title" required>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="cinemaName">Cinema</label>
-                        <select id="cinemaName" required>
-                            <option value="">Select Cinema</option>
-                            <option>Chaplin MEGA Silk Way</option>
-                            <option>Chaplin Khan Shatyr</option>
-                            <option>Arman Asia Park</option>
-                            <option>Kinopark 6 Keruencity</option>
-                            <option>Kinopark 8 IMAX Saryarqa</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="hall">Hall</label>
-                        <input type="text" id="hall" placeholder="Hall 1, IMAX, etc.">
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="startTime">Start Time</label>
-                        <input type="datetime-local" id="startTime" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="basePrice">Base Price (₸)</label>
-                        <input type="number" id="basePrice" min="0" step="100" required>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="availableSeats">Available Seats (comma separated)</label>
-                    <input type="text" id="availableSeats" 
-                           placeholder="A1, A2, A3, B1, B2, B3, C1, C2, C3" 
-                           value="A1,A2,A3,B1,B2,B3,C1,C2,C3">
-                </div>
-                
-                <div class="form-actions">
-                    <button onclick="createSession()">Create Session</button>
-                    <button onclick="toggleSessionForm()" class="secondary">Cancel</button>
-                </div>
+            <div class="stat-card">
+                <span class="stat-number" id="totalMovies">0</span>
+                <span class="stat-label">Movies in DB</span>
             </div>
-            
-            <div id="sessionsManagement" class="sessions-management">
-                <!-- Sessions will be loaded here -->
+            <div class="stat-card">
+                <span class="stat-number" id="totalSessions">0</span>
+                <span class="stat-label">Active Sessions</span>
             </div>
-        </div>
-
-        <div class="card">
-            <h3>📋 Recent Orders</h3>
-            <div id="adminOrders">
-                <!-- Orders will be loaded here -->
+            <div class="stat-card">
+                <span class="stat-number" id="revenue">0 ₸</span>
+                <span class="stat-label">Total Revenue</span>
             </div>
         </div>
     </div>
 
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/admin.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            loadAdminData();
-            setInterval(loadAdminData, 30000); // Обновлять каждые 30 секунд
-        });
-    </script>
+    <div class="card">
+        <h3>🎭 Session Management</h3>
+        <button onclick="toggleSessionForm()" class="secondary">➕ Add New Session</button>
+
+        <div id="sessionForm" style="display: none; margin-top: 20px; border-top: 2px dashed var(--color-primary); padding-top: 20px;">
+            <div class="form-group">
+                <label for="movieTitle">Movie Title</label>
+                <input type="text" id="movieTitle" placeholder="Enter movie title" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="cinemaName">Cinema Location</label>
+                    <select id="cinemaName" required>
+                        <option value="">Select Cinema</option>
+                        <option>Chaplin MEGA Silk Way</option>
+                        <option>Chaplin Khan Shatyr</option>
+                        <option>Arman Asia Park</option>
+                        <option>Kinopark 6 Keruencity</option>
+                        <option>Kinopark 8 IMAX Saryarqa</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="hall">Hall / Screen</label>
+                    <input type="text" id="hall" placeholder="Hall 1, IMAX, etc.">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startTime">Start Date & Time</label>
+                    <input type="datetime-local" id="startTime" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="basePrice">Base Price (₸)</label>
+                    <input type="number" id="basePrice" min="0" step="100" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="availableSeats">Seat Configuration (comma separated)</label>
+                <input type="text" id="availableSeats"
+                       placeholder="A1, A2, A3, B1, B2, B3"
+                       value="A1,A2,A3,B1,B2,B3,C1,C2,C3">
+                <small>Default: 9 seats (A1-C3)</small>
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 10px;">
+                <button onclick="createSession()" style="flex: 2;">Create Session</button>
+                <button onclick="toggleSessionForm()" class="secondary" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+
+        <div id="sessionsManagement" class="sessions-management" style="margin-top: 20px;">
+            <p class="loading">Loading active sessions...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📋 Recent Bookings</h3>
+        <div id="adminOrders">
+            <p class="loading">Fetching latest orders...</p>
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="loadAdminData()" class="secondary" style="padding: 8px 16px; font-size: 0.8rem;">🔄 Refresh Data</button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/admin.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAdminData();
+        // Фоновое обновление каждые 30 секунд
+        setInterval(loadAdminData, 30000);
+    });
+</script>
 </body>
 </html>

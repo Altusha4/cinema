@@ -3,104 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CinemaGo | Book Tickets</title>
+    <title>CinemaGo | Secure Booking</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="/pages/index.html" class="logo">🎬 CinemaGo</a>
-        <div class="nav-links">
-            <a href="/pages/index.html" class="nav-link">Movies</a>
-            <a href="/pages/sessions.html" class="nav-link">Sessions</a>
-            <a href="/pages/booking.html" class="nav-link active">Booking</a>
-            <a href="/pages/admin.html" class="nav-link">Admin</a>
+<nav class="navbar">
+    <a href="/" class="logo">🎬 CinemaGo</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/pages/index.html" class="nav-link">Search</a>
+        <a href="/pages/sessions.html" class="nav-link">Sessions</a>
+        <a href="/pages/booking.html" class="nav-link active">Booking</a>
+        <a href="/pages/admin.html" class="nav-link">Admin</a>
+    </div>
+</nav>
+
+<h1>🎟️ Finalize Your Booking</h1>
+
+<div class="card">
+    <h3>📋 Selected Session</h3>
+    <div id="sessionPreview" class="session-preview">
+        <p class="preview-text">No session selected. Please <a href="/pages/sessions.html">choose a session first</a>.</p>
+    </div>
+</div>
+
+<div class="card" id="bookingForm" style="display: none;">
+    <h3>👤 Personal Information</h3>
+
+    <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="student@aitu.edu.kz" required>
+        <small>Your digital ticket and promo code will be sent here.</small>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="age">Your Age</label>
+            <input type="number" id="age" placeholder="18" min="0" max="120" required>
         </div>
-    </nav>
 
-    <h1>🎫 Book Your Tickets</h1>
-
-    <div class="card">
-        <h3>📋 Selected Session</h3>
-        <div id="sessionPreview" class="session-preview">
-            <p class="preview-text">No session selected. Please <a href="/pages/sessions.html">choose a session first</a>.</p>
+        <div class="form-group">
+            <label for="seat">Selected Seat</label>
+            <input type="text" id="seat" placeholder="Select from list below..." readonly required>
         </div>
     </div>
 
-    <div class="card" id="bookingForm" style="display: none;">
-        <h3>👤 Personal Information</h3>
-        
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" placeholder="student@aitu.edu.kz" required>
-            <small>We'll send your ticket to this email</small>
+    <div class="form-group">
+        <label>Available Seats (Select one)</label>
+        <div id="availableSeats" class="seats-container">
         </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label for="age">Your Age</label>
-                <input type="number" id="age" placeholder="18" min="0" max="120" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="seat">Preferred Seat</label>
-                <input type="text" id="seat" placeholder="A1, B5, C12..." required>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label for="availableSeats">Available Seats</label>
-            <div id="availableSeats" class="seats-container">
-                <!-- Seats will be loaded here -->
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label class="student-option">
-                <input type="checkbox" id="isStudent" checked>
-                <span>I am a student (20% discount applied)</span>
-            </label>
-        </div>
-        
-        <div class="price-summary">
-            <div class="price-row">
-                <span>Base Price:</span>
-                <span id="basePrice">0 ₸</span>
-            </div>
-            <div class="price-row discount">
-                <span>Student Discount (20%):</span>
-                <span id="discountAmount">-0 ₸</span>
-            </div>
-            <div class="price-row total">
-                <span>Total to Pay:</span>
-                <span id="totalPrice">0 ₸</span>
-            </div>
-        </div>
-        
-        <div class="booking-actions">
-            <button onclick="bookTicket()" id="bookButton">Confirm Booking</button>
-            <button onclick="navigateTo('sessions')" class="secondary">Change Session</button>
-        </div>
-        
-        <div id="bookingResult"></div>
+        <small>Click on a seat to select it. Darker green seats are available.</small>
     </div>
 
-    <div class="card" id="successBooking" style="display: none;">
-        <h3>✅ Booking Confirmed!</h3>
-        <div class="success-message">
-            <p>Your tickets have been successfully booked!</p>
-            <div id="ticketDetails"></div>
-            <div class="success-actions">
-                <button onclick="printTicket()">🖨️ Print Ticket</button>
-                <button onclick="navigateTo('index')" class="secondary">Back to Home</button>
-            </div>
+    <div class="form-group">
+        <label class="student-option">
+            <input type="checkbox" id="isStudent" checked>
+            <span>Apply AITU Student Discount (20%)</span>
+        </label>
+    </div>
+
+    <div class="price-summary">
+        <div class="price-row">
+            <span>Standard Price:</span>
+            <span id="basePrice">0 ₸</span>
+        </div>
+        <div class="price-row discount">
+            <span>Student Discount:</span>
+            <span id="discountAmount">-0 ₸</span>
+        </div>
+        <div class="price-row total">
+            <span>Total Amount:</span>
+            <strong id="totalPrice">0 ₸</strong>
         </div>
     </div>
 
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/booking.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', loadSelectedSession);
-    </script>
+    <div class="booking-actions">
+        <button onclick="bookTicket()" id="bookButton">Confirm & Pay</button>
+        <button onclick="navigateTo('sessions')" class="secondary">Change Session</button>
+    </div>
+
+    <div id="bookingResult"></div>
+</div>
+
+<div class="card" id="successBooking" style="display: none; border-color: var(--color-accent);">
+    <h3>✨ Booking Successful!</h3>
+    <div class="success-message">
+        <p>Thank you! Ваше место успешно забронировано. Проверьте почту для получения билета.</p>
+
+        <div id="ticketDetails">
+        </div>
+
+        <div class="success-actions">
+            <button onclick="printTicket()" class="primary-action">🖨️ Print Ticket</button>
+            <button onclick="location.href='/'" class="secondary">🏠 Return to Dashboard</button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/booking.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Инициализация данных сессии из sessionStorage
+        loadSelectedSession();
+    });
+</script>
 </body>
 </html>

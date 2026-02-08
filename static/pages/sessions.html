@@ -8,90 +8,121 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="/pages/index.html" class="logo">🎬 CinemaGo</a>
-        <div class="nav-links">
-            <a href="/pages/index.html" class="nav-link">Movies</a>
-            <a href="/pages/sessions.html" class="nav-link active">Sessions</a>
-            <a href="/pages/booking.html" class="nav-link">Booking</a>
-            <a href="/pages/admin.html" class="nav-link">Admin</a>
-        </div>
-    </nav>
-
-    <h1>🎭 Movie Sessions</h1>
-
-    <div class="card">
-        <h3>🔍 Find Movie Sessions</h3>
-        <div class="filters">
-            <select id="cinemaSelect">
-                <option value="">All Cinemas</option>
-                <option>Chaplin MEGA Silk Way</option>
-                <option>Chaplin Khan Shatyr</option>
-                <option>Arman Asia Park</option>
-                <option>Kinopark 6 Keruencity</option>
-                <option>Kinopark 8 IMAX Saryarqa</option>
-            </select>
-            
-            <input type="date" id="dateInput" required>
-            
-            <input type="number" id="maxPrice" placeholder="Max price (₸)" min="0">
-            
-            <label class="student-option">
-                <input type="checkbox" id="onlyWithSeats">
-                <span>Only with available seats</span>
-            </label>
-            
-            <button onclick="applyFilters()">Search Sessions</button>
-        </div>
+<nav class="navbar">
+    <a href="/" class="logo">🎬 CinemaGo</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/pages/index.html" class="nav-link">Search</a>
+        <a href="/pages/sessions.html" class="nav-link active">Sessions</a>
+        <a href="/pages/booking.html" class="nav-link">Booking</a>
+        <a href="/pages/admin.html" class="nav-link">Admin</a>
     </div>
+</nav>
 
-    <div class="card" id="sessionsCard" style="display:none;">
-        <h3>📅 Available Sessions</h3>
-        <div id="selectedSessionInfo" class="session-info" style="display: none;">
-            <h4>Selected Session:</h4>
-            <p id="selectedMovie"></p>
-            <p id="selectedCinema"></p>
-            <p id="selectedTime"></p>
-            <p id="selectedPrice"></p>
-            <button onclick="navigateTo('booking')">Proceed to Booking</button>
-            <button onclick="clearSelection()" class="secondary">Clear Selection</button>
-        </div>
-        
-        <div id="sessionsList" class="sessions-list">
-            <!-- Sessions will be loaded here -->
-        </div>
+<h1>🗓️ Cinema Schedule</h1>
+
+<div class="card">
+    <h3>🔍 Find Movie Sessions</h3>
+    <p class="helper-text">Select your preferred cinema and date to see available shows</p>
+
+    <div class="filters">
+        <select id="cinemaSelect">
+            <option value="">All Cinemas</option>
+            <option>Chaplin MEGA Silk Way</option>
+            <option>Chaplin Khan Shatyr</option>
+            <option>Arman Asia Park</option>
+            <option>Kinopark 6 Keruencity</option>
+            <option>Kinopark 8 IMAX Saryarqa</option>
+        </select>
+
+        <input type="date" id="dateInput" required>
+
+        <input type="number" id="maxPrice" placeholder="Max price (₸)" min="0">
+
+        <label class="student-option">
+            <input type="checkbox" id="onlyWithSeats">
+            <span>Only with available seats</span>
+        </label>
+
+        <button onclick="applyFilters()">Search Sessions</button>
     </div>
+</div>
 
-    <div class="card">
-        <h3>ℹ️ Quick Info</h3>
+<div id="selectedSessionInfo" class="card" style="display: none; border: 3px solid var(--color-dark);">
+    <h3>📍 Selected Session</h3>
+    <div class="session-info">
         <div class="quick-info">
             <div class="info-item">
-                <span class="info-label">Selected Cinema:</span>
-                <span id="currentCinema">None</span>
+                <span class="info-label">Movie:</span>
+                <strong id="selectedMovie" style="color: var(--color-dark);"></strong>
             </div>
             <div class="info-item">
-                <span class="info-label">Selected Date:</span>
-                <span id="currentDate"></span>
+                <span class="info-label">Cinema:</span>
+                <span id="selectedCinema"></span>
             </div>
             <div class="info-item">
-                <span class="info-label">Available Sessions:</span>
-                <span id="sessionCount">0</span>
+                <span class="info-label">Time:</span>
+                <span id="selectedTime"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Price:</span>
+                <strong id="selectedPrice" class="price"></strong>
             </div>
         </div>
+        <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+            <button onclick="navigateTo('booking')" style="flex: 2;">🎟️ Proceed to Booking</button>
+            <button onclick="clearSelection()" class="secondary" style="flex: 1;">Clear</button>
+        </div>
     </div>
+</div>
 
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/sessions.js"></script>
-    <script>
-        // Установить сегодняшнюю дату по умолчанию
-        document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date().toISOString().slice(0, 10);
-            document.getElementById('dateInput').value = today;
-            document.getElementById('currentDate').textContent = today;
-            
-            // Автоматически загрузить сеансы на сегодня
-            setTimeout(() => applyFilters(), 500);
-        });
-    </script>
+<div class="card" id="sessionsCard" style="display:none;">
+    <h3>📅 Available Sessions</h3>
+    <div id="sessionsList" class="sessions-list">
+    </div>
+</div>
+
+<div class="card">
+    <h3>ℹ️ Search Summary</h3>
+    <div class="quick-info">
+        <div class="info-item">
+            <span class="info-label">Viewing Cinema:</span>
+            <span id="currentCinema">All Cinemas</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Target Date:</span>
+            <span id="currentDate"></span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Total Sessions Found:</span>
+            <span id="sessionCount">0</span>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/sessions.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Установка сегодняшней даты в календарь
+        const today = new Date().toISOString().slice(0, 10);
+        document.getElementById('dateInput').value = today;
+        document.getElementById('currentDate').textContent = today;
+
+        // 2. Восстановление выбранной сессии из памяти браузера
+        const saved = sessionStorage.getItem('selectedSession');
+        if (saved) {
+            const s = JSON.parse(saved);
+            document.getElementById('selectedMovie').textContent = s.title;
+            document.getElementById('selectedCinema').textContent = s.cinema;
+            document.getElementById('selectedTime').textContent = formatDateTime(s.time);
+            document.getElementById('selectedPrice').textContent = formatPrice(s.price);
+            document.getElementById('selectedSessionInfo').style.display = 'block';
+        }
+
+        // 3. Автоматический запуск фильтрации при входе
+        setTimeout(() => applyFilters(), 300);
+    });
+</script>
 </body>
 </html>
