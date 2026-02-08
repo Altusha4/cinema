@@ -19,97 +19,97 @@
     </div>
 </nav>
 
-<h1>🗓️ Cinema Schedule</h1>
+<main class="container">
+    <h1>🗓️ Cinema Schedule</h1>
 
-<div class="card">
-    <h3>🔍 Find Movie Sessions</h3>
-    <p class="helper-text">Select your preferred cinema and date to see available shows</p>
+    <div class="card">
+        <h3>🔍 Find Movie Sessions</h3>
+        <p class="helper-text">Select your preferred cinema and date to see available shows</p>
 
-    <div class="filters">
-        <select id="cinemaSelect">
-            <option value="">All Cinemas</option>
-            <option>Chaplin MEGA Silk Way</option>
-            <option>Chaplin Khan Shatyr</option>
-            <option>Arman Asia Park</option>
-            <option>Kinopark 6 Keruencity</option>
-            <option>Kinopark 8 IMAX Saryarqa</option>
-        </select>
+        <div class="filters">
+            <select id="cinemaSelect">
+                <option value="">All Cinemas</option>
+                <option>Chaplin MEGA Silk Way</option>
+                <option>Chaplin Khan Shatyr</option>
+                <option>Arman Asia Park</option>
+                <option>Kinopark 6 Keruencity</option>
+                <option>Kinopark 8 IMAX Saryarqa</option>
+            </select>
 
-        <input type="date" id="dateInput" required>
+            <input type="date" id="dateInput" required>
 
-        <input type="number" id="maxPrice" placeholder="Max price (₸)" min="0">
+            <input type="number" id="maxPrice" placeholder="Max price (₸)" min="0">
 
-        <label class="student-option">
-            <input type="checkbox" id="onlyWithSeats">
-            <span>Only with available seats</span>
-        </label>
+            <label class="student-option">
+                <input type="checkbox" id="onlyWithSeats">
+                <span>Only with available seats</span>
+            </label>
 
-        <button onclick="applyFilters()">Search Sessions</button>
+            <button onclick="applyFilters()">Search Sessions</button>
+        </div>
     </div>
-</div>
 
-<div id="selectedSessionInfo" class="card" style="display: none; border: 3px solid var(--color-dark);">
-    <h3>📍 Selected Session</h3>
-    <div class="session-info">
+    <div id="selectedSessionInfo" class="card" style="display: none; border: 3px solid var(--color-dark);">
+        <h3>📍 Selected Session</h3>
+        <div class="session-info">
+            <div class="quick-info">
+                <div class="info-item">
+                    <span class="info-label">Movie:</span>
+                    <strong id="selectedMovie" style="color: var(--color-dark);"></strong>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Cinema:</span>
+                    <span id="selectedCinema"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Time:</span>
+                    <span id="selectedTime"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Price:</span>
+                    <strong id="selectedPrice" class="price"></strong>
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button onclick="navigateTo('booking')" style="flex: 2;">🎟️ Proceed to Booking</button>
+                <button onclick="clearSelection()" class="secondary" style="flex: 1;">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" id="sessionsCard" style="display:none;">
+        <h3>📅 Available Sessions</h3>
+        <div id="sessionsList" class="sessions-list">
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>ℹ️ Search Summary</h3>
         <div class="quick-info">
             <div class="info-item">
-                <span class="info-label">Movie:</span>
-                <strong id="selectedMovie" style="color: var(--color-dark);"></strong>
+                <span class="info-label">Viewing Cinema:</span>
+                <span id="currentCinema">All Cinemas</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Cinema:</span>
-                <span id="selectedCinema"></span>
+                <span class="info-label">Target Date:</span>
+                <span id="currentDate"></span>
             </div>
             <div class="info-item">
-                <span class="info-label">Time:</span>
-                <span id="selectedTime"></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Price:</span>
-                <strong id="selectedPrice" class="price"></strong>
+                <span class="info-label">Total Sessions Found:</span>
+                <span id="sessionCount">0</span>
             </div>
         </div>
-        <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
-            <button onclick="navigateTo('booking')" style="flex: 2;">🎟️ Proceed to Booking</button>
-            <button onclick="clearSelection()" class="secondary" style="flex: 1;">Clear</button>
-        </div>
     </div>
-</div>
-
-<div class="card" id="sessionsCard" style="display:none;">
-    <h3>📅 Available Sessions</h3>
-    <div id="sessionsList" class="sessions-list">
-    </div>
-</div>
-
-<div class="card">
-    <h3>ℹ️ Search Summary</h3>
-    <div class="quick-info">
-        <div class="info-item">
-            <span class="info-label">Viewing Cinema:</span>
-            <span id="currentCinema">All Cinemas</span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">Target Date:</span>
-            <span id="currentDate"></span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">Total Sessions Found:</span>
-            <span id="sessionCount">0</span>
-        </div>
-    </div>
-</div>
+</main>
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/sessions.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // 1. Установка сегодняшней даты в календарь
         const today = new Date().toISOString().slice(0, 10);
         document.getElementById('dateInput').value = today;
         document.getElementById('currentDate').textContent = today;
 
-        // 2. Восстановление выбранной сессии из памяти браузера
         const saved = sessionStorage.getItem('selectedSession');
         if (saved) {
             const s = JSON.parse(saved);
@@ -120,7 +120,6 @@
             document.getElementById('selectedSessionInfo').style.display = 'block';
         }
 
-        // 3. Автоматический запуск фильтрации при входе
         setTimeout(() => applyFilters(), 300);
     });
 </script>

@@ -21,7 +21,8 @@
 
 <h1>⚙️ Admin Management</h1>
 
-<div class="admin-grid">
+<main class="admin-grid">
+
     <div class="card">
         <h3>📊 Statistics Overview</h3>
         <div class="stats-grid">
@@ -106,21 +107,21 @@
 
     <div class="card">
         <h3>📋 Recent Bookings</h3>
-        <div id="adminOrders">
+        <div id="adminOrders" class="table-container">
             <p class="loading">Fetching latest orders...</p>
         </div>
         <div style="margin-top: 20px; text-align: center;">
             <button onclick="loadAdminData()" class="secondary" style="padding: 8px 16px; font-size: 0.8rem;">🔄 Refresh Data</button>
         </div>
     </div>
-</div>
+
+</main>
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/admin.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         loadAdminData();
-        // Фоновое обновление каждые 30 секунд
         setInterval(loadAdminData, 30000);
     });
 </script>
