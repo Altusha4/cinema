@@ -104,28 +104,39 @@ function renderSeatMap() {
     if (!container) return;
 
     container.innerHTML = `
-        <div class="cinema-screen" style="width:80%; height:8px; background:#1a1a1a; margin:0 auto 30px; border-radius:10px; text-align:center; color:#379683; font-size:10px; padding-top:10px; letter-spacing:5px;">SCREEN</div>
-        <p style="font-size: 0.75rem; color: #aaa; margin-bottom: 25px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">Select your preferred seat</p>
+        <div class="cinema-screen">SCREEN</div>
+        <p style="font-size: 0.75rem; color: #aaa; margin-bottom: 25px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">
+            Grey seats are already taken
+        </p>
     `;
 
     const grid = document.createElement('div');
     grid.className = 'dynamic-seats-grid';
 
-    if (availableSeats.length === 0) {
-        grid.innerHTML = '<p style="color: #c0392b; grid-column: 1/-1; font-weight:800; padding:20px;">SOLD OUT!</p>';
-    }
+    // Используем TotalSeats для отрисовки всех кресел
+    // Если TotalSeats нет в ответе, используем заглушку или текущий доступный список
+    const allSeats = selectedSessionData.total_seats || ["A1","A2","A3","B1","B2","B3","C1","C2","C3"];
 
-    availableSeats.forEach(seatId => {
+    allSeats.forEach(seatId => {
         const seatEl = document.createElement('div');
-        seatEl.className = 'seat-node free';
+        const isAvailable = availableSeats.includes(seatId);
+
+        seatEl.className = isAvailable ? 'seat-node free' : 'seat-node occupied';
         seatEl.textContent = seatId;
 
-        seatEl.onclick = () => {
-            document.querySelectorAll('.seat-node.selected').forEach(s => s.classList.remove('selected'));
-            seatEl.classList.add('selected');
-            const seatInput = document.getElementById('seat');
-            if (seatInput) seatInput.value = seatId;
-        };
+        if (isAvailable) {
+            seatEl.onclick = () => {
+                document.querySelectorAll('.seat-node.selected').forEach(s => s.classList.remove('selected'));
+                seatEl.classList.add('selected');
+                const seatInput = document.getElementById('seat');
+                if (seatInput) seatInput.value = seatId;
+            };
+        } else {
+            // Стиль для занятого места
+            seatEl.style.opacity = "0.3";
+            seatEl.style.cursor = "not-allowed";
+            seatEl.style.background = "#907163"; // Цвет var(--color-muted)
+        }
         grid.appendChild(seatEl);
     });
 
@@ -277,5 +288,12 @@ styleNode.textContent = `
     .dynamic-seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 12px; max-width: 800px; margin: 0 auto; }
     .seat-node { height: 55px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; border-radius: 10px; cursor: pointer; background: #379683; color: white; transition: 0.2s; border: 2px solid #2d7a6a; }
     .seat-node.selected { background: #1a1a1a !important; color: #8ee4af !important; transform: scale(1.1); }
+    .seat-node.occupied {
+    background: #ccc !important;
+    border-color: #bbb !important;
+    color: #999 !important;
+    cursor: not-allowed;
+    transform: none !important; /* Отключаем анимацию при наведении */
+}
 `;
 document.head.appendChild(styleNode);

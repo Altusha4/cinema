@@ -18,6 +18,7 @@ type Session struct {
 	MovieTitle     string   `json:"movie_title" bson:"movie_title"`
 	BasePrice      float64  `json:"base_price" bson:"base_price"`
 	AvailableSeats []string `json:"available_seats" bson:"available_seats"`
+	TotalSeats     []string `json:"total_seats" bson:"total_seats"`
 
 	CinemaName string    `json:"cinema_name" bson:"cinema_name"`
 	Hall       string    `json:"hall,omitempty" bson:"hall,omitempty"`
