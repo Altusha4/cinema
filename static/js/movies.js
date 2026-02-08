@@ -219,6 +219,73 @@ styleInject.textContent = `
         border-radius: 6px;
     }
 `;
+
+// Функция Debounce (задержка)
+function debounce(func, timeout = 400) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
+// Поиск для подсказок
+async function liveSearch(query) {
+    const box = document.getElementById('searchSuggestions');
+    if (query.length < 2) {
+        box.style.display = 'none';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/movies?title=${encodeURIComponent(query)}`);
+        const movie = await res.json();
+
+        // TMDB при поиске по названию часто возвращает один лучший результат,
+        // но наше API настроено на FetchMovieDetails или SearchMovieByName.
+        // Если твой бэкенд возвращает список, пройдись циклом. Если один — выведи его:
+
+        if (movie && movie.title) {
+            box.innerHTML = `
+                <div class="suggestion-item" onclick="selectSuggestion('${movie.id}')">
+                    <img src="https://image.tmdb.org/t/p/w92${movie.poster_path}" alt="">
+                    <div class="suggestion-info">
+                        <span class="suggestion-title">${movie.title}</span>
+                        <span class="suggestion-year">${movie.release_date ? movie.release_date.split('-')[0] : ''}</span>
+                    </div>
+                </div>
+            `;
+            box.style.display = 'block';
+        }
+    } catch (e) {
+        console.error("Live search error", e);
+    }
+}
+
+// Функция при клике на подсказку
+function selectSuggestion(id) {
+    const input = document.getElementById('movieQuery');
+    input.value = id;
+    document.getElementById('searchSuggestions').style.display = 'none';
+    searchMovie(); // Запускаем основной поиск
+}
+
+// Навешиваем обработчик на ввод
+document.addEventListener('DOMContentLoaded', () => {
+    const queryInput = document.getElementById('movieQuery');
+    if (queryInput) {
+        const processInput = debounce((e) => liveSearch(e.target.value));
+        queryInput.addEventListener('input', processInput);
+    }
+
+    // Закрывать подсказки при клике вне поля
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('searchSuggestions').style.display = 'none';
+        }
+    });
+});
+
 document.head.appendChild(styleInject);
 
 console.log("movies.js синхронизирован с обновленной моделью Go (с рейтингом).");

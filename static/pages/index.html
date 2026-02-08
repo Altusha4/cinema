@@ -29,14 +29,13 @@
             -webkit-overflow-scrolling: touch !important;
             scrollbar-width: thin;
             scrollbar-color: var(--color-dark) transparent;
-            min-height: 380px; /* Фикс, чтобы контейнер не схлопывался при загрузке */
+            min-height: 380px;
         }
 
         #featuredMovies::-webkit-scrollbar { height: 8px; }
         #featuredMovies::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 10px; }
         #featuredMovies::-webkit-scrollbar-track { background: var(--color-secondary); }
 
-        /* Карточки и скелетоны */
         #featuredMovies > div {
             flex: 0 0 var(--card-width) !important;
             min-width: var(--card-width) !important;
@@ -113,6 +112,48 @@
         }
 
         #movieDetails { transition: opacity 0.5s ease; }
+
+        /* --- НОВЫЕ СТИЛИ ДЛЯ ЖИВОГО ПОИСКА --- */
+        .suggestions-box {
+            position: absolute;
+            top: 55px;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid var(--color-primary);
+            border-radius: 15px;
+            z-index: 2000;
+            max-height: 350px;
+            overflow-y: auto;
+            box-shadow: 10px 10px 0px rgba(55, 150, 131, 0.1);
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid var(--color-secondary);
+            transition: 0.2s;
+        }
+
+        .suggestion-item:hover { background: var(--color-secondary); }
+
+        .suggestion-item img {
+            width: 40px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #eee;
+        }
+
+        .suggestion-info { display: flex; flex-direction: column; gap: 2px; }
+
+        .suggestion-title { font-weight: 800; color: var(--color-dark); font-size: 0.95rem; }
+
+        .suggestion-year { font-size: 0.8rem; color: var(--color-muted); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -141,14 +182,16 @@
             <span class="tag" onclick="quickSearch('2024')">✨ New</span>
         </div>
 
-        <div class="search-container">
+        <div class="search-container" style="position: relative;">
             <div class="filters" style="display: flex; gap: 12px; align-items: stretch;">
                 <input type="text" id="movieQuery"
                        style="flex-grow: 1;"
-                       placeholder="Enter movie title or TMDb ID..."
+                       placeholder="Start typing movie title..."
+                       autocomplete="off"
                        onkeypress="if(event.key === 'Enter') searchMovie()">
                 <button onclick="searchMovie()" class="btn-primary" style="min-width: 120px;">Search</button>
             </div>
+            <div id="searchSuggestions" class="suggestions-box"></div>
         </div>
 
         <div id="movieDetails" class="movie-flex" style="display: none; margin-top: 35px; border-top: 3px dashed var(--color-primary); padding-top: 35px;">
@@ -198,24 +241,80 @@
             <div class="skeleton-card"></div>
         </div>
     </div>
-
-    <div class="card">
-        <h3>🚀 Navigation</h3>
-        <div class="filters" style="justify-content: center; gap: 20px; flex-wrap: wrap;">
-            <button onclick="location.href='/'" class="secondary">🏠 Dashboard</button>
-            <button onclick="navigateTo('sessions')" class="secondary">📅 Schedule</button>
-        </div>
-    </div>
 </main>
 
 <script src="/static/js/app.js?v=1.7"></script>
 <script src="/static/js/movies.js?v=1.7"></script>
 <script>
+    // --- ЛОГИКА ЖИВОГО ПОИСКА С DEBOUNCE ---
+    function debounce(func, timeout = 400) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
+
+    async function liveSearch(query) {
+        const box = document.getElementById('searchSuggestions');
+        if (query.trim().length < 2) {
+            box.style.display = 'none';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/movies?title=${encodeURIComponent(query)}`);
+            if (!res.ok) return;
+            const movie = await res.json();
+
+            // Если бэкенд возвращает один объект (текущая логика Go)
+            if (movie && movie.title) {
+                const year = movie.release_date ? movie.release_date.split('-')[0] : 'N/A';
+                const poster = movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : 'https://via.placeholder.com/92x138';
+
+                box.innerHTML = `
+                    <div class="suggestion-item" onclick="selectSuggestion('${movie.id}')">
+                        <img src="${poster}" alt="poster">
+                        <div class="suggestion-info">
+                            <span class="suggestion-title">${movie.title}</span>
+                            <span class="suggestion-year">⭐ ${movie.vote_average.toFixed(1)} | ${year}</span>
+                        </div>
+                    </div>
+                `;
+                box.style.display = 'block';
+            } else {
+                box.style.display = 'none';
+            }
+        } catch (e) {
+            console.error("Live search fail:", e);
+        }
+    }
+
+    function selectSuggestion(id) {
+        const input = document.getElementById('movieQuery');
+        input.value = id;
+        document.getElementById('searchSuggestions').style.display = 'none';
+        searchMovie();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        // Вызов функции из movies.js
         if (typeof loadFeaturedMovies === 'function') {
             loadFeaturedMovies();
         }
+
+        // Слушатель для живого поиска
+        const queryInput = document.getElementById('movieQuery');
+        if (queryInput) {
+            const processInput = debounce((e) => liveSearch(e.target.value));
+            queryInput.addEventListener('input', processInput);
+        }
+
+        // Скрыть подсказки при клике вне
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('searchSuggestions').style.display = 'none';
+            }
+        });
 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('id')) {
