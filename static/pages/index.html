@@ -3,9 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CinemaGo | Movie Search</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <meta http-equiv="Content-Security-Policy" content="img-src 'self' https://image.tmdb.org https://via.placeholder.com data:;">
+
+    <title>CinemaGo | Movie Search & Discovery</title>
+
+    <link rel="stylesheet" href="/static/css/style.css?v=1.7">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --carousel-gap: 20px;
+            --card-width: 220px;
+        }
+
+        /* Принудительная карусель */
+        #featuredMovies {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            gap: var(--carousel-gap) !important;
+            padding: 15px 5px 25px 5px !important;
+            scroll-behavior: smooth !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: thin;
+            scrollbar-color: var(--color-dark) transparent;
+            min-height: 380px; /* Фикс, чтобы контейнер не схлопывался при загрузке */
+        }
+
+        #featuredMovies::-webkit-scrollbar { height: 8px; }
+        #featuredMovies::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 10px; }
+        #featuredMovies::-webkit-scrollbar-track { background: var(--color-secondary); }
+
+        /* Карточки и скелетоны */
+        #featuredMovies > div {
+            flex: 0 0 var(--card-width) !important;
+            min-width: var(--card-width) !important;
+            max-width: var(--card-width) !important;
+            width: var(--card-width) !important;
+            scroll-snap-align: start;
+        }
+
+        .featured-card {
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: #fff;
+            border: 2px solid var(--color-primary);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 5px 5px 0px var(--color-primary);
+        }
+
+        .featured-card:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 8px 8px 0px var(--color-dark);
+        }
+
+        .scroll-hint {
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            animation: bounceRight 2s infinite;
+        }
+
+        @keyframes bounceRight {
+            0%, 20%, 50%, 80%, 100% {transform: translateX(0);}
+            40% {transform: translateX(-5px);}
+            60% {transform: translateX(-3px);}
+        }
+
+        .tag {
+            background: var(--color-secondary);
+            border: 2px solid var(--color-primary);
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover { background: var(--color-dark); color: white; transform: translateY(-2px); }
+
+        .tag-outline {
+            border: 1.5px solid var(--color-primary);
+            padding: 4px 12px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            font-weight: 700;
+        }
+
+        .skeleton-card {
+            height: 330px;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e6e6e6 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 20px;
+            border: 2px solid var(--color-primary);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        #movieDetails { transition: opacity 0.5s ease; }
+    </style>
 </head>
 <body>
 <nav class="navbar">
@@ -24,70 +132,105 @@
 
     <div class="card">
         <h3>🎬 Film Database</h3>
-        <p class="helper-text">
-            Search by Movie Title (e.g., Inception) or TMDb ID
-        </p>
+
+        <div class="genre-tags" style="display: flex; gap: 12px; margin-bottom: 25px; flex-wrap: wrap;">
+            <span class="tag" onclick="quickSearch('Inception')">🌀 Mind-bending</span>
+            <span class="tag" onclick="quickSearch('Marvel')">🦸 Superheroes</span>
+            <span class="tag" onclick="quickSearch('Horror')">👻 Scary</span>
+            <span class="tag" onclick="quickSearch('Interstellar')">🚀 Space</span>
+            <span class="tag" onclick="quickSearch('2024')">✨ New</span>
+        </div>
 
         <div class="search-container">
-            <div class="filters">
-                <input type="text" id="movieQuery" placeholder="Enter movie title or TMDb ID..." value="Interstellar">
-                <button onclick="searchMovie()">Search Movie</button>
+            <div class="filters" style="display: flex; gap: 12px; align-items: stretch;">
+                <input type="text" id="movieQuery"
+                       style="flex-grow: 1;"
+                       placeholder="Enter movie title or TMDb ID..."
+                       onkeypress="if(event.key === 'Enter') searchMovie()">
+                <button onclick="searchMovie()" class="btn-primary" style="min-width: 120px;">Search</button>
             </div>
         </div>
 
-        <div id="movieDetails" class="movie-flex" style="display: none;">
+        <div id="movieDetails" class="movie-flex" style="display: none; margin-top: 35px; border-top: 3px dashed var(--color-primary); padding-top: 35px;">
             <div class="poster-side">
-                <img id="moviePoster" src="" alt="Movie Poster">
+                <img id="moviePoster" src="" alt="Movie Poster" style="border-radius: 20px; box-shadow: 10px 10px 0px var(--color-primary);">
             </div>
             <div class="info-side">
-                <h2 id="movieTitle"></h2>
-                <p id="movieRelease"></p>
-                <p id="movieOverview"></p>
-                <div class="movie-meta">
-                    <span id="movieId" class="status-badge"></span>
-                    <span id="movieAdult" class="status-badge"></span>
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px;">
+                    <h2 id="movieTitle" style="margin: 0; font-size: 2rem;"></h2>
+                    <span id="movieRating" class="status-badge" style="background: var(--color-dark); font-size: 1rem; padding: 5px 12px;">⭐ 0.0</span>
                 </div>
-                <div style="margin-top: 20px;">
-                    <button onclick="navigateTo('sessions')" class="primary-action">📅 View Showtimes</button>
+                <p id="movieRelease" style="font-weight: 800; color: var(--color-muted); margin-bottom: 15px;"></p>
+                <p id="movieOverview" style="font-size: 1rem; line-height: 1.7; margin-bottom: 20px;"></p>
+
+                <div class="movie-meta" style="display: flex; gap: 12px; margin-bottom: 25px;">
+                    <span id="movieId" class="tag-outline"></span>
+                    <span id="movieAdult" class="tag-outline"></span>
+                </div>
+
+                <div class="action-row">
+                    <button onclick="navigateTo('sessions')" class="btn-shine" style="padding: 18px 30px; font-size: 1.1rem;">📅 View Showtimes</button>
                 </div>
             </div>
         </div>
 
-        <details style="margin-top: 20px; cursor: pointer;">
-            <summary style="font-size: 0.8rem; color: var(--color-muted);">View Raw JSON Response (API Debug)</summary>
-            <pre id="movieJson"></pre>
+        <details style="margin-top: 30px; cursor: pointer; border: 1px solid var(--color-primary); border-radius: 12px; padding: 10px;">
+            <summary style="font-size: 0.85rem; color: var(--color-muted); font-weight: 600;">👨‍💻 Developer Tools</summary>
+            <pre id="movieJson" style="font-size: 0.8rem; margin-top: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
         </details>
+
+        <div id="searchPlaceholder" style="text-align: center; padding: 60px 20px; color: var(--color-muted);">
+            <p style="font-size: 1.2rem; margin: 0;">Enter a keyword above to explore our cinema library.</p>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>🔥 Popular Now</h3>
-        <div id="featuredMovies" class="movies-grid">
-            <p class="loading">Loading popular movies...</p>
+    <div class="card" style="overflow: hidden; border-width: 3px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 1.5rem;">🔥 Popular Now</h3>
+            <div class="scroll-hint">Scroll right <span style="font-size: 1.2rem;">→</span></div>
+        </div>
+
+        <div id="featuredMovies">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
         </div>
     </div>
 
     <div class="card">
         <h3>🚀 Navigation</h3>
-        <div class="filters" style="justify-content: center; gap: 20px;">
-            <button onclick="location.href='/'" class="secondary">🏠 Back to Dashboard</button>
-            <button onclick="navigateTo('booking')" class="secondary">🎫 Direct Booking</button>
+        <div class="filters" style="justify-content: center; gap: 20px; flex-wrap: wrap;">
+            <button onclick="location.href='/'" class="secondary">🏠 Dashboard</button>
+            <button onclick="navigateTo('sessions')" class="secondary">📅 Schedule</button>
         </div>
     </div>
 </main>
 
-<script src="/static/js/app.js"></script>
-<script src="/static/js/movies.js"></script>
+<script src="/static/js/app.js?v=1.7"></script>
+<script src="/static/js/movies.js?v=1.7"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        loadFeaturedMovies();
+        // Вызов функции из movies.js
+        if (typeof loadFeaturedMovies === 'function') {
+            loadFeaturedMovies();
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const movieId = urlParams.get('id');
-        if (movieId) {
-            document.getElementById('movieQuery').value = movieId;
-            searchMovie();
+        if (urlParams.get('id')) {
+            const input = document.getElementById('movieQuery');
+            input.value = urlParams.get('id');
+            setTimeout(() => searchMovie(), 300);
         }
     });
+
+    function quickSearch(query) {
+        const input = document.getElementById('movieQuery');
+        input.value = query;
+        searchMovie();
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
 </script>
 </body>
 </html>

@@ -20,18 +20,17 @@
 </nav>
 
 <main class="dashboard-container">
-
     <div class="welcome-section card">
         <div class="user-info">
             <h1>Welcome back, <span id="userName">Altynay</span>! 👋</h1>
-            <p>Ready for another movie night at Astana IT University?</p>
+            <p>Ready for another movie night at <span style="color: var(--color-dark); font-weight: 700;">AITU</span>?</p>
         </div>
         <div class="user-stats">
-            <div class="stat-item">
+            <div class="stat-item tooltip">
                 <span class="stat-value" id="userBonuses">450 ₸</span>
                 <span class="stat-label">Bonuses</span>
             </div>
-            <div class="stat-item" style="border-color: var(--color-dark);">
+            <div class="stat-item highlight-border">
                 <span class="stat-value">20%</span>
                 <span class="stat-label">Student Discount</span>
             </div>
@@ -39,40 +38,63 @@
     </div>
 
     <div class="dashboard-grid">
-
         <div class="card">
             <h3>🚀 Quick Actions</h3>
             <div class="action-buttons" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
-                <button onclick="location.href='/pages/index.html'">🔍 Find a Movie</button>
+                <button onclick="location.href='/pages/index.html'" class="btn-shine">🔍 Find a Movie</button>
                 <button onclick="location.href='/pages/sessions.html'" class="secondary">📅 View Schedule</button>
+                <button onclick="window.print()" style="background: none; border: 1px solid var(--color-primary); color: var(--color-muted); font-size: 0.8rem; padding: 8px;">🖨️ Export Stats</button>
             </div>
         </div>
 
-        <div class="card highlight-card" style="border-left: 8px solid var(--color-dark);">
+        <div class="card highlight-card">
             <h3>🎬 Recommended for You</h3>
             <div id="recommendationContent">
-                <p class="helper-text">Trending in Science Fiction</p>
-                <div class="mini-movie-card" onclick="location.href='/pages/index.html?id=157336'" style="cursor: pointer; padding: 20px; background: var(--color-secondary); border-radius: 15px; transition: 0.3s; margin-top: 15px;">
-                    <strong>Interstellar</strong>
-                    <span style="font-size: 0.85rem; color: var(--color-muted); display: block; margin-top: 5px;">2014 • Directed by Christopher Nolan</span>
+                <div class="loading-shimmer" style="height: 100px; background: var(--color-secondary); border-radius: 15px; display: flex; align-items: center; justify-content: center;">
+                    <p class="helper-text">Fetching trends...</p>
                 </div>
             </div>
         </div>
-
     </div>
 
     <div class="card">
         <h3>🎫 Your Latest Bookings</h3>
-        <div id="recentOrdersContainer" class="tickets-placeholder" style="padding: 20px; text-align: center;">
-            <p>Checking your recent tickets...</p>
-            <button onclick="location.href='/pages/sessions.html'" class="secondary" style="margin-top: 15px;">Book a New Ticket</button>
+        <div id="recentOrdersContainer" class="tickets-placeholder">
+            <div class="loader"></div>
+            <p>Checking your digital vault...</p>
         </div>
     </div>
 </main>
 
 <script src="/static/js/app.js"></script>
 <script>
-    // Функция для загрузки и отрисовки заказов в виде таблицы (чтобы заполнить ширину)
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchRecentOrders();
+        fetchDynamicRecommendation();
+    });
+
+    // Новая функция: Подгрузка случайного трендового фильма из твоего API
+    async function fetchDynamicRecommendation() {
+        const recContainer = document.getElementById('recommendationContent');
+        try {
+            // Используем твой эндпоинт /movies с дефолтным ID или поиском трендов
+            const res = await fetch('/movies?id=634649'); // Например, Человек-паук или любой другой ID
+            const movie = await res.json();
+
+            recContainer.innerHTML = `
+                <p class="helper-text">Trending in your region</p>
+                <div class="mini-movie-card" onclick="location.href='/pages/index.html?id=${movie.id}'" style="cursor: pointer; padding: 15px; background: var(--color-secondary); border-radius: 15px; transition: 0.3s;">
+                    <strong>${movie.title}</strong>
+                    <span style="font-size: 0.85rem; color: var(--color-muted); display: block; margin-top: 5px;">
+                        ⭐ ${movie.vote_average || '8.5'} | ${movie.release_date.split('-')[0]}
+                    </span>
+                </div>
+            `;
+        } catch (e) {
+            recContainer.innerHTML = `<p class="helper-text">Check out the latest Sci-Fi releases!</p>`;
+        }
+    }
+
     async function fetchRecentOrders() {
         const container = document.getElementById('recentOrdersContainer');
         try {
@@ -80,44 +102,67 @@
             const orders = await res.json();
 
             if (orders && orders.length > 0) {
-                // Берем последние 3 заказа для наглядности на широком экране
                 const recent = orders.slice(-3).reverse();
-
                 container.innerHTML = `
-                        <div class="table-container" style="overflow-x: auto; margin-top: 10px;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid var(--color-primary);">
-                                        <th style="padding: 12px; color: var(--color-muted);">Movie Title</th>
-                                        <th style="padding: 12px; color: var(--color-muted);">Seat</th>
-                                        <th style="padding: 12px; color: var(--color-muted);">Price</th>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Movie Title</th>
+                                    <th>Seat</th>
+                                    <th>Price</th>
+                                    <th>Promo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${recent.map(o => `
+                                    <tr>
+                                        <td><strong>${o.movie_title}</strong></td>
+                                        <td><span class="status-badge">${o.seat || 'N/A'}</span></td>
+                                        <td>${o.final_price} ₸</td>
+                                        <td><code style="background: var(--color-secondary); padding: 4px 8px; border-radius: 5px;">${o.promo_code}</code></td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    ${recent.map(o => `
-                                        <tr style="border-bottom: 1px solid var(--color-secondary);">
-                                            <td style="padding: 12px;"><strong>${o.movie_title}</strong></td>
-                                            <td style="padding: 12px;"><span class="status-badge" style="background: var(--color-dark);">${o.seat}</span></td>
-                                            <td style="padding: 12px; font-weight: 700;">${o.final_price} ₸</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        <button onclick="location.href='/pages/sessions.html'" class="secondary" style="margin-top: 25px;">Book More Tickets</button>
-                    `;
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button onclick="location.href='/pages/sessions.html'" class="secondary">Book Another Movie</button>
+                    </div>
+                `;
             } else {
                 container.innerHTML = `
-                        <p style="margin-bottom: 20px;">No active bookings found.</p>
-                        <button onclick="location.href='/pages/sessions.html'" class="secondary">Book Your First Ticket</button>
-                    `;
+                    <div style="padding: 40px;">
+                        <p style="color: var(--color-muted); font-size: 1.1rem; margin-bottom: 20px;">You haven't booked any movies yet.</p>
+                        <button onclick="location.href='/pages/sessions.html'">Start Exploring</button>
+                    </div>
+                `;
             }
         } catch (e) {
-            container.innerHTML = `<p>Connect to server to see your tickets.</p>`;
+            container.innerHTML = `<p>Error loading your bookings. Is the server running?</p>`;
         }
     }
-
-    document.addEventListener('DOMContentLoaded', fetchRecentOrders);
 </script>
+
+<style>
+    /* Дополнительные микро-стили для Dashboard */
+    .highlight-border { border: 2px solid var(--color-dark) !important; }
+    .loader {
+        border: 4px solid var(--color-secondary);
+        border-top: 4px solid var(--color-dark);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 10px auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .mini-movie-card:hover {
+        background: white !important;
+        transform: scale(1.02);
+        box-shadow: 4px 4px 0px var(--color-primary);
+    }
+</style>
 </body>
 </html>

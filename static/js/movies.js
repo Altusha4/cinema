@@ -1,9 +1,27 @@
-// Работа с фильмами и TMDB API
+/**
+ * ============================================================
+ * CinemaGo - Movies & Discovery Module
+ * ============================================================
+ * Разработано для Astana IT University.
+ * Синхронизировано с моделями Go: ID, Title, Overview, PosterPath,
+ * ReleaseDate, Adult, VoteAverage
+ * ============================================================
+ */
 
+/**
+ * 1. ОСНОВНАЯ ФУНКЦИЯ ПОИСКА (searchMovie)
+ */
 async function searchMovie() {
-    const query = document.getElementById('movieQuery').value.trim();
+    console.log("Инициализация поиска фильма...");
+
+    const queryInput = document.getElementById('movieQuery');
+    if (!queryInput) return;
+
+    const query = queryInput.value.trim();
     if (!query) {
-        showNotification('Please enter a movie title or ID', 'error');
+        if (typeof showNotification === 'function') {
+            showNotification('Please enter a movie title or TMDb ID', 'error');
+        }
         return;
     }
 
@@ -12,135 +30,195 @@ async function searchMovie() {
 
     try {
         const res = await fetch(`/movies?${param}`);
-        const data = await res.json();
+        const rawData = await res.json();
 
-        if (!res.ok || data.error) {
-            throw new Error(data.error || 'Movie not found');
+        if (!res.ok || rawData.error) {
+            throw new Error(rawData.error || 'Movie not found');
         }
 
-        displayMovie(data);
-        showNotification(`Found: ${data.title}`, 'success');
-        
+        // Поддержка вложенности данных от Go-бэкенда
+        const movieData = rawData.movie || rawData.data || rawData;
+
+        displayMovie(movieData);
+
+        if (typeof showNotification === 'function') {
+            showNotification(`Success: ${movieData.title} loaded`, 'success');
+        }
+
     } catch (error) {
-        showNotification(error.message, 'error');
-        document.getElementById('movieDetails').style.display = 'none';
+        console.error("Ошибка поиска:", error);
+        if (typeof showNotification === 'function') {
+            showNotification(error.message, 'error');
+        }
+        const detailsBox = document.getElementById('movieDetails');
+        if (detailsBox) detailsBox.style.display = 'none';
     }
 }
 
+/**
+ * 2. ФУНКЦИЯ ОТОБРАЖЕНИЯ (displayMovie)
+ */
 function displayMovie(data) {
-    document.getElementById('movieTitle').textContent = data.title;
-    document.getElementById('movieRelease').textContent = 
-        `Release: ${data.release_date || 'Unknown'}`;
-    document.getElementById('movieOverview').textContent = 
-        data.overview || 'No description available';
-    document.getElementById('movieId').textContent = `TMDb ID: ${data.id}`;
-    document.getElementById('movieAdult').textContent = 
-        data.adult ? '18+' : 'All Ages';
-    document.getElementById('movieAdult').style.background = 
-        data.adult ? '#c0392b' : '#5CDB95';
+    console.log("Отрисовка данных фильма...");
 
+    const safeSetText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    };
+
+    // Сопоставление с твоей Go-моделью
+    safeSetText('movieTitle', data.title || 'Unknown Title');
+    safeSetText('movieRelease', `Release Date: ${data.release_date || 'N/A'}`);
+    safeSetText('movieOverview', data.overview || 'No description available.');
+    safeSetText('movieId', `ID: ${data.id}`);
+
+    // Логика рейтинга (используем новое поле vote_average)
+    const ratingEl = document.getElementById('movieRating');
+    if (ratingEl) {
+        const score = data.vote_average || 0;
+        ratingEl.style.display = 'inline-block';
+        ratingEl.innerHTML = `⭐ ${parseFloat(score).toFixed(1)}`;
+    }
+
+    // Логика Adult (bool из модели)
+    const adultEl = document.getElementById('movieAdult');
+    if (adultEl) {
+        adultEl.textContent = data.adult ? '18+' : 'All Ages';
+        adultEl.style.backgroundColor = data.adult ? '#c0392b' : '#379683';
+    }
+
+    // Постер
     const poster = document.getElementById('moviePoster');
-    poster.src = data.poster_path 
-        ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
-        : 'https://via.placeholder.com/500x750?text=No+Poster';
-    poster.alt = `${data.title} Poster`;
+    if (poster) {
+        const posterPath = data.poster_path;
+        const cb = `?t=${new Date().getTime()}`;
+        poster.src = posterPath
+            ? `https://image.tmdb.org/t/p/w500${posterPath}${cb}`
+            : 'https://via.placeholder.com/500x750?text=No+Poster';
+    }
 
-    document.getElementById('movieJson').textContent = 
-        JSON.stringify(data, null, 2);
-
-    document.getElementById('movieDetails').style.display = 'flex';
+    // Плавное появление контейнера
+    const detailsBox = document.getElementById('movieDetails');
+    if (detailsBox) {
+        detailsBox.style.display = 'flex';
+        setTimeout(() => { detailsBox.style.opacity = '1'; }, 10);
+    }
 }
 
+/**
+ * 3. ЗАГРУЗКА ПОПУЛЯРНОГО (loadFeaturedMovies)
+ */
 async function loadFeaturedMovies() {
-    try {
-        // Пример популярных фильмов (можно расширить для реального API)
-        const featuredIds = [157336, 27205, 155, 680, 238];
-        const container = document.getElementById('featuredMovies');
-        
-        container.innerHTML = '<div class="loading">Loading...</div>';
-        
-        // Для демо покажем статические данные
-        setTimeout(() => {
-            container.innerHTML = `
-                <div class="featured-grid">
-                    <div class="featured-card" onclick="searchMovieById(157336)">
-                        <img src="https://image.tmdb.org/t/p/w300/8b8R8l88Qje9dn9OE8PY05Nx1S8.jpg" alt="Interstellar">
-                        <h4>Interstellar</h4>
-                        <p>2014 • Sci-Fi</p>
-                    </div>
-                    <div class="featured-card" onclick="searchMovieById(27205)">
-                        <img src="https://image.tmdb.org/t/p/w300/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg" alt="Inception">
-                        <h4>Inception</h4>
-                        <p>2010 • Action</p>
-                    </div>
-                    <div class="featured-card" onclick="searchMovieById(155)">
-                        <img src="https://image.tmdb.org/t/p/w300/3h1JZGDhZ8nzxdgvkxha0qBqi05.jpg" alt="The Dark Knight">
-                        <h4>The Dark Knight</h4>
-                        <p>2008 • Action</p>
-                    </div>
-                </div>
-            `;
-        }, 500);
-        
-    } catch (error) {
-        console.error('Error loading featured movies:', error);
+    console.log("Загрузка карусели...");
+    const container = document.getElementById('featuredMovies');
+    if (!container) return;
+
+    const featuredIds = [1156593, 698687, 129, 1391511, 372058];
+    container.innerHTML = '';
+
+    for (const id of featuredIds) {
+        try {
+            const res = await fetch(`/movies?id=${id}`);
+            const rawData = await res.json();
+            const movie = rawData.movie || rawData.data || rawData;
+
+            if (movie && !movie.error) {
+                renderFeaturedCard(movie, container);
+            }
+        } catch (error) {
+            console.error(`Ошибка загрузки ID ${id}:`, error);
+        }
     }
 }
 
+/**
+ * 4. ОТРИСОВКА КАРТОЧКИ КАРУСЕЛИ (renderFeaturedCard)
+ */
+function renderFeaturedCard(movie, container) {
+    const card = document.createElement('div');
+    card.className = 'featured-card';
+    card.onclick = () => searchMovieById(movie.id);
+
+    const year = movie.release_date ? movie.release_date.split('-')[0] : '2026';
+    const score = movie.vote_average ? movie.vote_average.toFixed(1) : '0.0';
+
+    const posterPath = movie.poster_path;
+    const imgUrl = posterPath
+        ? `https://image.tmdb.org/t/p/w500${posterPath}`
+        : 'https://via.placeholder.com/500x750';
+
+    card.innerHTML = `
+        <img src="${imgUrl}" alt="Poster" 
+             onerror="this.src='https://via.placeholder.com/500x750?text=Image+Not+Found'">
+        <div class="card-info">
+            <h4>${movie.title || 'Movie'}</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                <p style="margin: 0;">${year}</p>
+                <span class="card-rating">⭐ ${score}</span>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(card);
+}
+
+/**
+ * 5. ПОИСК ПО КЛИКУ
+ */
 function searchMovieById(id) {
-    document.getElementById('movieQuery').value = id;
-    searchMovie();
+    const queryInput = document.getElementById('movieQuery');
+    if (queryInput) {
+        queryInput.value = id;
+        searchMovie();
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
 }
 
-// Стили для сетки фильмов
-const moviesStyle = document.createElement('style');
-moviesStyle.textContent = `
-    .movies-grid {
-        display: grid;
-        gap: 20px;
-        margin-top: 20px;
-    }
-    
-    .featured-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 20px;
-    }
-    
+/**
+ * 6. ИНЪЕКЦИЯ СТИЛЕЙ
+ */
+const styleInject = document.createElement('style');
+styleInject.textContent = `
     .featured-card {
-        background: var(--color-secondary);
-        border-radius: 15px;
+        background: #ffffff;
+        border: 2px solid var(--color-primary);
+        border-radius: 20px;
         overflow: hidden;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        min-width: 220px;
+        max-width: 220px;
+        box-shadow: 6px 6px 0px var(--color-primary);
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 10px;
     }
-    
     .featured-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 10px 10px 0px var(--color-dark);
+        border-color: var(--color-dark);
     }
-    
     .featured-card img {
         width: 100%;
-        height: 250px;
+        height: 300px;
         object-fit: cover;
+        border-bottom: 2px solid var(--color-primary);
     }
-    
+    .card-info { padding: 15px; flex-grow: 1; }
     .featured-card h4 {
-        margin: 15px;
-        color: var(--color-dark);
+        margin: 0; font-size: 1rem; font-weight: 800; color: var(--color-dark);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    
-    .featured-card p {
-        margin: 0 15px 15px;
-        color: var(--color-muted);
-        font-size: 0.9rem;
-    }
-    
-    .loading {
-        text-align: center;
-        padding: 40px;
-        color: var(--color-muted);
+    .featured-card p { color: var(--color-muted); font-size: 0.85rem; font-weight: 600; margin: 0; }
+    .card-rating {
+        color: #f1c40f; 
+        font-weight: 800; 
+        font-size: 0.85rem;
+        background: rgba(241, 196, 15, 0.1);
+        padding: 2px 6px;
+        border-radius: 6px;
     }
 `;
-document.head.appendChild(moviesStyle);
+document.head.appendChild(styleInject);
+
+console.log("movies.js синхронизирован с обновленной моделью Go (с рейтингом).");
