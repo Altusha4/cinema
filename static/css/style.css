@@ -392,3 +392,10 @@ pre {
         grid-template-columns: 1fr;
     }
 }
+.seat-node.occupied {
+    background: #ccc !important;
+    border-color: #bbb !important;
+    color: #999 !important;
+    cursor: not-allowed;
+    transform: none !important; /* Отключаем анимацию при наведении */
+}
