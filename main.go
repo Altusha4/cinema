@@ -25,9 +25,20 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Note: Using system environment variables")
+	if err := godotenv.Load(".env"); err != nil {
+		log.Println("Note: Using system environment variables:", err)
 	}
+
+	if err := service.SendEmail("workworkwork11072005@gmail.com", "CinemaGo test", "Hello from Go"); err != nil {
+		log.Println("TEST EMAIL FAILED:", err)
+	} else {
+		log.Println("TEST EMAIL SENT OK")
+	}
+
+	log.Println("SMTP_HOST =", os.Getenv("SMTP_HOST"))
+	log.Println("SMTP_PORT =", os.Getenv("SMTP_PORT"))
+	log.Println("SMTP_USER =", os.Getenv("SMTP_USER"))
+	log.Println("SMTP_PASS length =", len(os.Getenv("SMTP_PASS")))
 
 	if err := service.ConnectMongo(); err != nil {
 		log.Fatal("Mongo connection failed: ", err)
@@ -150,10 +161,15 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 
 	finalPrice := service.CalculatePrice(session.BasePrice, input.IsStudent)
 
+	promo := service.GeneratePromoCode()
+	bonuses := service.CalcBonuses(finalPrice)
+
 	order := models.Order{
 		CustomerEmail: input.Email,
 		MovieTitle:    session.MovieTitle,
 		FinalPrice:    finalPrice,
+		PromoCode:     promo,
+		BonusesEarned: bonuses,
 	}
 
 	saved, err := models.SaveOrderMongo(order)
@@ -164,7 +180,7 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle)
+	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle, saved.PromoCode)
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"status": "Success",

@@ -1,9 +1,6 @@
 package service
 
-import (
-	"fmt"
-	"time"
-)
+import "log"
 
 func CalculatePrice(base float64, isStudent bool) float64 {
 	if isStudent {
@@ -11,13 +8,22 @@ func CalculatePrice(base float64, isStudent bool) float64 {
 	}
 	return base
 }
-func SendAsyncNotification(email string, movieTitle string) {
+
+func SendAsyncNotification(email string, movieTitle string, promoCode string) {
 	go func() {
-		fmt.Printf("[SYSTEM] Goroutine started: Processing ticket for %s...\n", email)
-		time.Sleep(5 * time.Second)
-		fmt.Printf("[SYSTEM] SUCCESS: Email notification for '%s' sent to %s\n", movieTitle, email)
+		err := SendEmail(
+			email,
+			"CinemaGo: Booking confirmed",
+			"Your ticket for '"+movieTitle+"' is confirmed.\n"+
+				"Promo code: "+promoCode+"\n"+
+				"Enjoy the movie!",
+		)
+		if err != nil {
+			log.Println("[EMAIL] send failed:", err)
+		} else {
+			log.Println("[EMAIL] sent to:", email)
+		}
 	}()
 }
-func ValidateBooking(email string) bool {
-	return email != ""
-}
+
+func ValidateBooking(email string) bool { return email != "" }
