@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -51,25 +52,78 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", serveFrontend)
+
+	// Статические файлы (CSS, JS, картинки)
 	fileServer := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
+	// HTML страницы приложения
+	pagesFS := http.FileServer(http.Dir("./static/pages"))
+	mux.Handle("/pages/", http.StripPrefix("/pages/", pagesFS))
+
+	// Главная страница (redirect на welcome или index)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.ServeFile(w, r, "./static/pages/index.html")
+			return
+		}
+		http.NotFound(w, r)
+	})
+
+	// API маршруты (ТВОЙ СУЩЕСТВУЮЩИЙ БЭК - НЕ МЕНЯЕМ!)
 	mux.HandleFunc("/movies", getMovieHandler)
 	mux.HandleFunc("/book", createBookingHandler)
 	mux.HandleFunc("/orders", listOrdersHandler)
-
 	mux.HandleFunc("/sessions", sessionsHandler)
 	mux.HandleFunc("/reserve", reserveSeatHandler)
 
-	fmt.Printf("CinemaGo Server running at http://localhost:%s\n", port)
+	fmt.Printf("🎬 CinemaGo Server running at http://localhost:%s\n", port)
+	fmt.Printf("📁 Static files: http://localhost:%s/static/\n", port)
+	fmt.Printf("📄 Pages: http://localhost:%s/pages/\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
 }
 
-func serveFrontend(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "index.html")
+// Функция для обслуживания HTML страниц
+func servePages(w http.ResponseWriter, r *http.Request) {
+	// Убираем префикс /pages/
+	path := strings.TrimPrefix(r.URL.Path, "/pages/")
+	if path == "" {
+		path = "index.html"
+	}
+
+	// Безопасная проверка пути
+	if strings.Contains(path, "..") {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	// Полный путь к файлу
+	filePath := filepath.Join("./static/pages", path)
+
+	// Проверяем существование файла
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// Если файл не найден, пробуем добавить .html
+		if !strings.HasSuffix(path, ".html") {
+			filePath = filepath.Join("./static/pages", path+".html")
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				http.NotFound(w, r)
+				return
+			}
+		} else {
+			http.NotFound(w, r)
+			return
+		}
+	}
+
+	// Определяем Content-Type
+	if strings.HasSuffix(filePath, ".html") {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	}
+
+	http.ServeFile(w, r, filePath)
 }
 
+// ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ!
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
