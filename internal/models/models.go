@@ -29,4 +29,7 @@ type Order struct {
 	CustomerEmail string  `json:"customer_email" bson:"customer_email"`
 	MovieTitle    string  `json:"movie_title" bson:"movie_title"`
 	FinalPrice    float64 `json:"final_price" bson:"final_price"`
+
+	PromoCode     string `json:"promo_code" bson:"promo_code"`
+	BonusesEarned int    `json:"bonuses_earned" bson:"bonuses_earned"`
 }
