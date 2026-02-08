@@ -254,19 +254,47 @@ function showSuccessBooking(order) {
 /**
  * 7. ФУНКЦИЯ СКАЧИВАНИЯ (Исправлено)
  */
-function downloadTicket() {
+async function downloadTicket() {
     const element = document.getElementById('captureTicket');
     if (!element) return;
 
+    // Показываем лоадер или меняем текст кнопки
+    const btn = document.querySelector('.primary-action');
+    const originalText = btn.textContent;
+    btn.textContent = "Generating PDF...";
+
     const opt = {
-        margin: 10,
+        margin: 0,
         filename: 'CinemaGo_Ticket.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: {
+            scale: 3, // Увеличиваем качество
+            useCORS: true,
+            allowTaint: true,
+            letterRendering: true,
+            scrollY: 0,
+            scrollX: 0
+        },
         jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(element).save();
+    try {
+        // Принудительно ждем загрузки картинок внутри элемента
+        const images = element.getElementsByTagName('img');
+        const imagePromises = Array.from(images).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+        });
+        await Promise.all(imagePromises);
+
+        // Сама генерация
+        await html2pdf().set(opt).from(element).save();
+    } catch (err) {
+        console.error("PDF Error:", err);
+        alert("Error generating PDF. Try taking a screenshot instead.");
+    } finally {
+        btn.textContent = originalText;
+    }
 }
 
 function isValidEmail(email) {
