@@ -27,11 +27,11 @@ func main() {
 		log.Println("Note: Using system environment variables")
 	}
 
+	// В варианте "всё хранится в Mongo" — Mongo обязательна
 	if err := service.ConnectMongo(); err != nil {
-		log.Println("Mongo disabled (falling back to In-memory):", err)
-	} else {
-		log.Println("Connected to MongoDB Atlas!")
+		log.Fatal("Mongo connection failed: ", err)
 	}
+	log.Println("Connected to MongoDB Atlas!")
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -47,13 +47,21 @@ func main() {
 	mux.HandleFunc("/book", createBookingHandler)
 	mux.HandleFunc("/orders", listOrdersHandler)
 
-	fmt.Printf("CinemaGo Server running at http://localhost:%s\n", port)
+	mux.HandleFunc("/sessions", sessionsHandler)
+	mux.HandleFunc("/reserve", reserveSeatHandler)
 
+	fmt.Printf("CinemaGo Server running at http://localhost:%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
 }
 
 func serveFrontend(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func getMovieHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,82 +80,168 @@ func getMovieHandler(w http.ResponseWriter, r *http.Request) {
 		movie, err = api.FetchMovieDetails(id)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Movie not found: " + err.Error()})
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Movie not found: " + err.Error()})
 		return
 	}
-	json.NewEncoder(w).Encode(movie)
+
+	writeJSON(w, http.StatusOK, movie)
 }
 
 func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed. Use POST.", http.StatusMethodNotAllowed)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{
+			"error": "Method not allowed. Use POST.",
+		})
 		return
 	}
 
 	var input struct {
 		Email     string `json:"email"`
-		MovieID   string `json:"movie_id"`
+		SessionID int    `json:"session_id"`
+		Seat      string `json:"seat"`
 		IsStudent bool   `json:"is_student"`
+		Age       int    `json:"age"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid JSON input",
+		})
 		return
 	}
 
 	if !service.ValidateBooking(input.Email) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Valid email is required!"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Valid email is required",
+		})
 		return
 	}
 
-	var movie *models.Movie
-	var err error
-
-	if _, checkErr := fmt.Sscan(input.MovieID, new(int)); checkErr == nil {
-		movie, err = api.FetchMovieDetails(input.MovieID)
-	} else {
-		movie, err = api.SearchMovieByName(input.MovieID)
+	session, ok, err := models.GetSessionByIDMongo(input.SessionID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{
+			"error": "Session not found",
+		})
+		return
 	}
 
-	movieTitle := "Unknown Movie"
-	if err == nil {
-		movieTitle = movie.Title
+	if input.Age < 18 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "18+ sessions only",
+		})
+		return
 	}
 
-	finalPrice := service.CalculatePrice(2000.0, input.IsStudent)
+	_, err = models.ReserveSeatMongo(input.SessionID, input.Seat)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
 
-	newOrder := models.Order{
+	finalPrice := service.CalculatePrice(session.BasePrice, input.IsStudent)
+
+	order := models.Order{
 		CustomerEmail: input.Email,
-		MovieTitle:    movieTitle,
+		MovieTitle:    session.MovieTitle,
 		FinalPrice:    finalPrice,
 	}
 
-	err = models.SaveOrderMongo(newOrder)
+	saved, err := models.SaveOrderMongo(order)
 	if err != nil {
-		log.Println("Database error:", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Database error",
+		})
+		return
 	}
 
-	service.SendAsyncNotification(input.Email, movieTitle)
+	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, http.StatusCreated, map[string]any{
 		"status": "Success",
-		"order":  newOrder,
+		"order":  saved,
 	})
 }
 
 func listOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	orders, err := models.GetAllOrdersMongo()
 	if err != nil {
-		orders = []models.Order{}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
-	json.NewEncoder(w).Encode(orders)
+	writeJSON(w, http.StatusOK, orders)
+}
+
+func sessionsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		maxPriceStr := r.URL.Query().Get("max_price")
+		onlyStr := r.URL.Query().Get("only_with_seats")
+
+		var maxPrice float64
+		if maxPriceStr != "" {
+			_, _ = fmt.Sscanf(maxPriceStr, "%f", &maxPrice)
+		}
+		onlyWithSeats := (onlyStr == "true" || onlyStr == "1")
+
+		list, err := models.FilterSessionsMongo(maxPrice, onlyWithSeats)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, list)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var s models.Session
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+			return
+		}
+
+		created, err := models.AddSessionMongo(s)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, created)
+		return
+	}
+
+	writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+}
+
+func reserveSeatHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Method not allowed"})
+		return
+	}
+
+	var input struct {
+		SessionID int    `json:"session_id"`
+		Seat      string `json:"seat"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	updated, err := models.ReserveSeatMongo(input.SessionID, input.Seat)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
 }

@@ -122,3 +122,29 @@ func GetMovieCount() int {
 	defer mu.RUnlock()
 	return len(movies)
 }
+
+func FilterSessions(maxPrice float64, onlyWithSeats bool) []Session {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	out := make([]Session, 0)
+	for _, s := range sessions {
+		if maxPrice > 0 && s.BasePrice > maxPrice {
+			continue
+		}
+		if onlyWithSeats && len(s.AvailableSeats) == 0 {
+			continue
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
+func GetAllSessions() []Session {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	out := make([]Session, len(sessions))
+	copy(out, sessions)
+	return out
+}
