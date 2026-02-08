@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cinema/internal/service"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -39,17 +40,34 @@ func GetSessionByIDMongo(id int) (Session, bool, error) {
 	return s, true, nil
 }
 
-func FilterSessionsMongo(maxPrice float64, onlyWithSeats bool) ([]Session, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func FilterSessionsMongo(cinema string, date string, maxPrice float64, onlyWithSeats bool) ([]Session, error) {
+	if service.MongoDB == nil {
+		return FilterSessions(maxPrice, onlyWithSeats), nil
+	}
+
+	loc, _ := time.LoadLocation("Asia/Almaty")
+	dayStart, err := time.ParseInLocation("2006-01-02", date, loc)
+	if err != nil {
+		return nil, err
+	}
+	dayEnd := dayStart.Add(24 * time.Hour)
 
 	filter := bson.M{}
+
+	if cinema != "" {
+		filter["cinema_name"] = cinema
+	}
+	filter["start_time"] = bson.M{"$gte": dayStart, "$lt": dayEnd}
+
 	if maxPrice > 0 {
 		filter["base_price"] = bson.M{"$lte": maxPrice}
 	}
 	if onlyWithSeats {
 		filter["available_seats.0"] = bson.M{"$exists": true}
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	cur, err := service.SessionsCollection().Find(ctx, filter)
 	if err != nil {
