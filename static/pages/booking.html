@@ -4,10 +4,161 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CinemaGo | Secure Booking</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Стили схемы зала */
+        .seats-container {
+            background: #111;
+            padding: 40px 20px;
+            border-radius: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .cinema-screen {
+            width: 80%;
+            height: 6px;
+            background: #5dade2;
+            margin: 0 auto 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(93, 173, 226, 0.5);
+            color: #5dade2;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 10px;
+            text-align: center;
+            padding-top: 10px;
+        }
+
+        .dynamic-seats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+            gap: 10px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .seat-node {
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #379683;
+            color: white;
+            transition: 0.2s;
+            border: 2px solid #2d7a6a;
+        }
+
+        .seat-node:hover { background: #8ee4af; transform: scale(1.1); }
+        .seat-node.selected {
+            background: #1a1a1a !important;
+            color: #8ee4af !important;
+            border-color: #1a1a1a;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* --- СТИЛЬ НОВОГО БИЛЕТА С ПОСТЕРОМ --- */
+        .ticket-download-card {
+            width: 380px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            font-family: 'Montserrat', sans-serif;
+            text-align: left;
+        }
+
+        .ticket-poster-header {
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        /* Эффект затухания на постере */
+        .ticket-poster-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 60%;
+            background: linear-gradient(transparent, white);
+        }
+
+        .ticket-info-section {
+            padding: 25px;
+            position: relative;
+        }
+
+        .ticket-brand {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .ticket-movie-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin: 0 0 20px 0;
+            line-height: 1.2;
+        }
+
+        .ticket-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .meta-item label {
+            display: block;
+            font-size: 0.65rem;
+            color: #aaa;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .meta-item span {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .ticket-footer-price {
+            border-top: 2px dashed #eee;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .final-price-tag {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #379683;
+        }
+
+        .bonus-text {
+            font-size: 0.75rem;
+            color: #888;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+    </style>
 </head>
 <body>
+
 <nav class="navbar">
     <a href="/" class="logo">🎬 CinemaGo</a>
     <div class="nav-links">
@@ -35,79 +186,68 @@
         <div class="form-group">
             <label for="email">Email Address</label>
             <input type="email" id="email" placeholder="student@aitu.edu.kz" required>
-            <small>Your digital ticket and promo code will be sent here.</small>
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
+        <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 150px;">
                 <label for="age">Your Age</label>
-                <input type="number" id="age" placeholder="18" min="0" max="120" required>
+                <input type="number" id="age" placeholder="18" min="0" required>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="flex: 1; min-width: 150px;">
                 <label for="seat">Selected Seat</label>
-                <input type="text" id="seat" placeholder="Select from list below..." readonly required>
+                <input type="text" id="seat" placeholder="Click on map..." readonly required
+                       style="background: #f8f9fa; font-weight: 800;">
             </div>
         </div>
 
         <div class="form-group">
-            <label>Available Seats (Select one)</label>
-            <div id="availableSeats" class="seats-container">
-            </div>
-            <small>Click on a seat to select it. Darker green seats are available.</small>
+            <label>🎬 Choose your seat</label>
+            <div id="availableSeats" class="seats-container"></div>
         </div>
 
         <div class="form-group">
-            <label class="student-option">
+            <label class="student-option" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                 <input type="checkbox" id="isStudent" checked>
-                <span>Apply AITU Student Discount (20%)</span>
+                <span style="font-weight: 700;">AITU Student Discount (20%)</span>
             </label>
         </div>
 
-        <div class="price-summary">
-            <div class="price-row">
-                <span>Standard Price:</span>
-                <span id="basePrice">0 ₸</span>
-            </div>
-            <div class="price-row discount">
-                <span>Student Discount:</span>
-                <span id="discountAmount">-0 ₸</span>
-            </div>
-            <div class="price-row total">
+        <div class="price-summary" style="background: #f8f9fa; padding: 20px; border-radius: 15px; margin: 25px 0;">
+            <div class="price-row" style="display: flex; justify-content: space-between;">
                 <span>Total Amount:</span>
-                <strong id="totalPrice">0 ₸</strong>
+                <strong id="totalPrice" style="font-size: 1.4rem; color: var(--color-dark);">0 ₸</strong>
             </div>
         </div>
 
-        <div class="booking-actions">
-            <button onclick="bookTicket()" id="bookButton">Confirm & Pay</button>
-            <button onclick="navigateTo('sessions')" class="secondary">Change Session</button>
+        <div class="booking-actions" style="display: flex; gap: 15px;">
+            <button onclick="bookTicket()" id="bookButton" style="flex: 2; height: 55px;">Confirm Booking</button>
+            <button onclick="window.location.href='/pages/sessions.html'" class="secondary" style="flex: 1;">Back</button>
         </div>
-
-        <div id="bookingResult"></div>
     </div>
 
-    <div class="card" id="successBooking" style="display: none; border-color: var(--color-accent);">
-        <h3>✨ Booking Successful!</h3>
-        <div class="success-message">
-            <p>Thank you! Ваше место успешно забронировано. Проверьте почту для получения билета.</p>
+    <div class="card" id="successBooking" style="display: none; text-align: center;">
+        <h2 style="color: #379683;">✨ Order Confirmed!</h2>
+        <p>Your ticket is ready. See you at the movies!</p>
 
-            <div id="ticketDetails">
-            </div>
+        <div id="ticketDetails"></div>
 
-            <div class="success-actions">
-                <button onclick="printTicket()" class="primary-action">🖨️ Print Ticket</button>
-                <button onclick="location.href='/'" class="secondary">🏠 Return to Dashboard</button>
-            </div>
+        <div class="success-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+            <button onclick="downloadTicket()" class="primary-action" style="padding: 0 30px;">📥 Download PDF</button>
+            <button onclick="location.href='/'" class="secondary" style="padding: 0 30px;">Home</button>
         </div>
     </div>
 </main>
+
+[Image of a modern movie ticket design with a cinematic background image, bold movie title, seat details, and a clear total price]
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/booking.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        loadSelectedSession();
+        if (typeof loadSelectedSession === 'function') {
+            loadSelectedSession();
+        }
     });
 </script>
 </body>

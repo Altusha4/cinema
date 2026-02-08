@@ -1,504 +1,281 @@
-// Логика бронирования билетов
+/**
+ * CinemaGo - Final Professional Booking & PDF Module
+ * Разработано для Алтынай (AITU)
+ * Исправлено: Динамическая сетка, генерация PDF с постером, расчет скидок.
+ */
 
+// Глобальные переменные состояния
 let selectedSessionData = null;
 let availableSeats = [];
 
+/**
+ * Вспомогательные функции (Утилиты)
+ */
+function formatPrice(price) {
+    return price + " ₸";
+}
+
+function formatDateTime(dateTimeStr) {
+    const date = new Date(dateTimeStr);
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * 1. ИНИЦИАЛИЗАЦИЯ
+ * Подгружает данные из sessionStorage и настраивает UI.
+ */
 async function loadSelectedSession() {
-    const sessionData = sessionStorage.getItem('selectedSession');
+    console.log("Initializing booking module...");
+
+    const rawData = sessionStorage.getItem('selectedSession');
     const bookingForm = document.getElementById('bookingForm');
     const sessionPreview = document.getElementById('sessionPreview');
-    
-    if (!sessionData) {
-        bookingForm.style.display = 'none';
+
+    if (!rawData || rawData === "null") {
+        console.warn("Session data missing in sessionStorage.");
+        if (bookingForm) bookingForm.style.display = 'none';
+        if (sessionPreview) {
+            sessionPreview.innerHTML = `
+                <div class="empty-state" style="text-align:center; padding:40px; border:2px dashed #379683; border-radius:15px;">
+                    <p style="color:#666; font-size:1.1rem; font-weight:600;">No movie session selected.</p>
+                    <a href="/pages/sessions.html" class="btn-primary" style="display:inline-block; margin-top:10px; text-decoration:none; padding:12px 25px; background:#379683; color:white; border-radius:10px; font-weight:800;">
+                        ← Back to Sessions
+                    </a>
+                </div>`;
+        }
         return;
     }
-    
-    selectedSessionData = JSON.parse(sessionData);
-    bookingForm.style.display = 'block';
-    
-    // Отобразить информацию о сеансе
-    sessionPreview.innerHTML = `
-        <div class="selected-session">
-            <h4>${selectedSessionData.title}</h4>
-            <div class="session-info-grid">
-                <div class="info-item">
-                    <span class="label">Cinema:</span>
-                    <span class="value">${selectedSessionData.cinema}</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Time:</span>
-                    <span class="value">${formatDateTime(selectedSessionData.time)}</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Base Price:</span>
-                    <span class="value price">${formatPrice(selectedSessionData.price)}</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Session ID:</span>
-                    <span class="value">#${selectedSessionData.id}</span>
+
+    try {
+        selectedSessionData = JSON.parse(rawData);
+    } catch (e) {
+        console.error("Error parsing session data:", e);
+        return;
+    }
+
+    if (bookingForm) bookingForm.style.display = 'block';
+
+    if (sessionPreview) {
+        sessionPreview.innerHTML = `
+            <div class="selected-session" style="border-left: 6px solid #379683; padding:15px; background:#f9f9f9; border-radius:0 15px 15px 0; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+                <h4 style="margin:0; color:#1a1a1a; font-weight:800; font-size:1.3rem;">${selectedSessionData.title}</h4>
+                <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.95rem; color:#666;">
+                    <span>📍 ${selectedSessionData.cinema}</span>
+                    <span>🕒 ${formatDateTime(selectedSessionData.time)}</span>
+                    <span style="color:#1a1a1a; font-weight:700; grid-column: 1/-1;">💰 Base Price: ${formatPrice(selectedSessionData.price)}</span>
                 </div>
             </div>
-        </div>
-    `;
-    
-    // Загрузить доступные места
-    await loadAvailableSeats();
-    // Обновить расчет цены
+        `;
+    }
+
+    await fetchAvailableSeats();
     updatePriceCalculation();
 }
 
-async function loadAvailableSeats() {
+/**
+ * 2. ПОЛУЧЕНИЕ МЕСТ С СЕРВЕРА
+ */
+async function fetchAvailableSeats() {
     if (!selectedSessionData) return;
-    
     try {
-        const res = await fetch(`/sessions?date=${selectedSessionData.time.slice(0, 10)}&cinema=${encodeURIComponent(selectedSessionData.cinema)}`);
+        const dateStr = selectedSessionData.time.slice(0, 10);
+        const res = await fetch(`/sessions?date=${dateStr}`);
+        if (!res.ok) throw new Error("Server response not ok");
+
         const sessions = await res.json();
-        
-        if (sessions && sessions.length > 0) {
-            const currentSession = sessions.find(s => s.id === selectedSessionData.id);
-            if (currentSession) {
-                availableSeats = currentSession.available_seats || [];
-                renderAvailableSeats();
-            }
-        }
-    } catch (error) {
-        console.error('Error loading seats:', error);
-        availableSeats = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']; // Демо-места
-        renderAvailableSeats();
+        const session = sessions.find(s => s.id === selectedSessionData.id);
+
+        availableSeats = session ? session.available_seats : [];
+        renderSeatMap();
+
+    } catch (e) {
+        console.error("Failed to load seats from DB:", e);
+        // Резерв для теста
+        availableSeats = ["A1", "A2", "B1", "B2", "C1", "D1", "E1"];
+        renderSeatMap();
     }
 }
 
-function renderAvailableSeats() {
+/**
+ * 3. ОТРИСОВКА СЕТКИ МЕСТ
+ */
+function renderSeatMap() {
     const container = document.getElementById('availableSeats');
-    container.innerHTML = '';
-    
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="cinema-screen" style="width:80%; height:8px; background:#1a1a1a; margin:0 auto 30px; border-radius:10px; text-align:center; color:#379683; font-size:10px; padding-top:10px; letter-spacing:5px;">SCREEN</div>
+        <p style="font-size: 0.75rem; color: #aaa; margin-bottom: 25px; font-weight:700; text-transform:uppercase; letter-spacing:2px;">Select your preferred seat</p>
+    `;
+
+    const grid = document.createElement('div');
+    grid.className = 'dynamic-seats-grid';
+
     if (availableSeats.length === 0) {
-        container.innerHTML = '<p class="no-seats">No seats available for this session</p>';
-        return;
+        grid.innerHTML = '<p style="color: #c0392b; grid-column: 1/-1; font-weight:800; padding:20px;">SOLD OUT!</p>';
     }
-    
-    const seatInput = document.getElementById('seat');
-    
-    availableSeats.forEach(seat => {
-        const seatElement = document.createElement('div');
-        seatElement.className = 'seat-option';
-        seatElement.textContent = seat;
-        seatElement.onclick = () => {
-            // Убрать выделение со всех мест
-            document.querySelectorAll('.seat-option').forEach(s => s.classList.remove('selected'));
-            // Выделить выбранное место
-            seatElement.classList.add('selected');
-            // Заполнить поле ввода
-            seatInput.value = seat;
+
+    availableSeats.forEach(seatId => {
+        const seatEl = document.createElement('div');
+        seatEl.className = 'seat-node free';
+        seatEl.textContent = seatId;
+
+        seatEl.onclick = () => {
+            document.querySelectorAll('.seat-node.selected').forEach(s => s.classList.remove('selected'));
+            seatEl.classList.add('selected');
+            const seatInput = document.getElementById('seat');
+            if (seatInput) seatInput.value = seatId;
         };
-        
-        container.appendChild(seatElement);
+        grid.appendChild(seatEl);
     });
-    
-    // Выбрать первое место по умолчанию
-    if (availableSeats.length > 0 && !seatInput.value) {
-        seatInput.value = availableSeats[0];
-        container.children[0].classList.add('selected');
-    }
+
+    container.appendChild(grid);
 }
 
+/**
+ * 4. ДИНАМИЧЕСКИЙ РАСЧЕТ ЦЕНЫ
+ */
 function updatePriceCalculation() {
     if (!selectedSessionData) return;
-    
     const isStudent = document.getElementById('isStudent').checked;
-    const basePrice = selectedSessionData.price;
-    const discount = isStudent ? basePrice * 0.2 : 0;
-    const totalPrice = basePrice - discount;
-    
-    document.getElementById('basePrice').textContent = formatPrice(basePrice);
-    document.getElementById('discountAmount').textContent = formatPrice(-discount);
-    document.getElementById('totalPrice').textContent = formatPrice(totalPrice);
+    const base = selectedSessionData.price;
+    const discount = isStudent ? base * 0.2 : 0;
+    const total = base - discount;
+
+    const baseEl = document.getElementById('basePrice');
+    const discountEl = document.getElementById('discountAmount');
+    const totalEl = document.getElementById('totalPrice');
+
+    if (baseEl) baseEl.textContent = formatPrice(base);
+    if (discountEl) discountEl.textContent = formatPrice(-discount);
+    if (totalEl) totalEl.textContent = formatPrice(total);
 }
 
+/**
+ * 5. БРОНИРОВАНИЕ
+ */
 async function bookTicket() {
     const email = document.getElementById('email').value.trim();
     const age = Number(document.getElementById('age').value);
-    const seat = document.getElementById('seat').value.trim().toUpperCase();
+    const seat = document.getElementById('seat').value;
     const isStudent = document.getElementById('isStudent').checked;
     const bookButton = document.getElementById('bookButton');
-    const bookingResult = document.getElementById('bookingResult');
-    
-    // Валидация
-    if (!email || !isValidEmail(email)) {
-        showNotification('Please enter a valid email address', 'error');
+
+    if (!email || !seat || age < 18) {
+        alert("Please fill all fields correctly (Age 18+, Email, Seat).");
         return;
     }
-    
-    if (age < 18) {
-        showNotification('You must be at least 18 years old to book tickets', 'error');
-        return;
-    }
-    
-    if (!seat || !availableSeats.includes(seat)) {
-        showNotification('Please select a valid seat from available options', 'error');
-        return;
-    }
-    
-    if (!selectedSessionData) {
-        showNotification('No session selected', 'error');
-        return;
-    }
-    
-    // Показать загрузку
+
     bookButton.disabled = true;
     bookButton.textContent = 'Processing...';
-    bookingResult.innerHTML = '<div class="loading">Processing your booking...</div>';
-    
+
     try {
-        const response = await fetch('/book', {
+        const res = await fetch('/book', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email,
-                session_id: selectedSessionData.id,
-                seat,
-                is_student: isStudent,
-                age
+                email, session_id: selectedSessionData.id, seat, is_student: isStudent, age
             })
         });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
+
+        const data = await res.json();
+        if (res.ok) {
             showSuccessBooking(data.order);
-            showNotification('Booking successful!', 'success');
         } else {
-            throw new Error(data.error || 'Booking failed');
+            throw new Error(data.error || 'Server rejected booking');
         }
-        
-    } catch (error) {
-        bookingResult.innerHTML = `
-            <div class="error-message">
-                ❌ ${error.message}
-            </div>
-        `;
-        showNotification(error.message, 'error');
+    } catch (e) {
+        alert(e.message);
     } finally {
         bookButton.disabled = false;
-        bookButton.textContent = 'Confirm Booking';
+        bookButton.textContent = 'Confirm & Pay';
     }
 }
 
+/**
+ * 6. ОТОБРАЖЕНИЕ БИЛЕТА (Инлайновые стили для PDF)
+ */
 function showSuccessBooking(order) {
     document.getElementById('bookingForm').style.display = 'none';
     document.getElementById('successBooking').style.display = 'block';
-    
-    document.getElementById('ticketDetails').innerHTML = `
-        <div class="ticket">
-            <div class="ticket-header">
-                <h4>🎟️ Ticket #${order.id}</h4>
-                <span class="ticket-id">REF: ${Date.now()}</span>
+
+    const posterUrl = selectedSessionData.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600';
+    const ticketDetails = document.getElementById('ticketDetails');
+
+    if (ticketDetails) {
+        ticketDetails.innerHTML = `
+            <div id="captureTicket" style="width: 380px; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid #eee; font-family: sans-serif; margin: 20px auto; text-align: left;">
+                <div style="height: 160px; background: url('${posterUrl}') center/cover no-repeat; position: relative;">
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(transparent, white);"></div>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #999; text-transform: uppercase; font-weight: bold; margin-bottom: 10px;">
+                        <span>CinemaGo Digital</span>
+                        <span>#${order.id || 'AITU-2026'}</span>
+                    </div>
+                    <h2 style="margin: 0 0 15px 0; font-size: 1.4rem; color: #1a1a1a; font-weight: 800;">${order.movie_title}</h2>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px dashed #eee; padding-bottom: 15px;">
+                        <div style="text-align:left;">
+                            <small style="color:#aaa; display:block; font-size:0.6rem; text-transform:uppercase;">Seat</small>
+                            <span style="font-weight: 800; font-size: 0.9rem;">${document.getElementById('seat').value}</span>
+                        </div>
+                        <div style="text-align:center;">
+                            <small style="color:#aaa; display:block; font-size:0.6rem; text-transform:uppercase;">Time</small>
+                            <span style="font-weight: 800; font-size: 0.9rem;">${selectedSessionData.time.slice(11, 16)}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <small style="color:#aaa; display:block; font-size:0.6rem; text-transform:uppercase;">Date</small>
+                            <span style="font-weight: 800; font-size: 0.9rem;">${selectedSessionData.time.slice(0, 10)}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.6rem; font-weight: 800; color: #379683;">
+                        ${formatPrice(order.final_price)}
+                    </div>
+                    <div style="text-align: center; font-size: 0.75rem; color: #999; margin-top: 10px;">
+                        Enjoy! Bonuses earned: +${order.bonuses_earned} 🍿
+                    </div>
+                </div>
             </div>
-            <div class="ticket-body">
-                <div class="ticket-row">
-                    <span>Movie:</span>
-                    <strong>${order.movie_title}</strong>
-                </div>
-                <div class="ticket-row">
-                    <span>Cinema:</span>
-                    <span>${selectedSessionData.cinema}</span>
-                </div>
-                <div class="ticket-row">
-                    <span>Time:</span>
-                    <span>${formatDateTime(selectedSessionData.time)}</span>
-                </div>
-                <div class="ticket-row">
-                    <span>Seat:</span>
-                    <span class="seat-badge">${document.getElementById('seat').value}</span>
-                </div>
-                <div class="ticket-row">
-                    <span>Email:</span>
-                    <span>${order.customer_email}</span>
-                </div>
-                <div class="ticket-row total">
-                    <span>Paid:</span>
-                    <strong>${formatPrice(order.final_price)}</strong>
-                </div>
-            </div>
-            <div class="ticket-footer">
-                <p>Present this ticket at the cinema entrance. Have a great show! 🍿</p>
-            </div>
-        </div>
-    `;
+        `;
+    }
 }
 
-function printTicket() {
-    const ticketContent = document.querySelector('.ticket').outerHTML;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Ticket - CinemaGo</title>
-                <style>
-                    body { font-family: Arial, sans-serif; padding: 20px; }
-                    .ticket { border: 2px solid #000; padding: 20px; max-width: 400px; }
-                    .ticket-header { border-bottom: 1px dashed #000; padding-bottom: 10px; }
-                    .ticket-row { display: flex; justify-content: space-between; margin: 10px 0; }
-                    .seat-badge { background: #000; color: white; padding: 2px 8px; border-radius: 4px; }
-                    .total { border-top: 2px solid #000; padding-top: 10px; margin-top: 20px; }
-                </style>
-            </head>
-            <body>${ticketContent}</body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+/**
+ * 7. ФУНКЦИЯ СКАЧИВАНИЯ (Исправлено)
+ */
+function downloadTicket() {
+    const element = document.getElementById('captureTicket');
+    if (!element) return;
+
+    const opt = {
+        margin: 10,
+        filename: 'CinemaGo_Ticket.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
 }
 
-// Навесить слушатели событий
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Слушатели событий
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('isStudent').addEventListener('change', updatePriceCalculation);
-    document.getElementById('age').addEventListener('input', updatePriceCalculation);
-    document.getElementById('seat').addEventListener('input', () => {
-        document.querySelectorAll('.seat-option').forEach(seat => {
-            seat.classList.toggle('selected', seat.textContent === document.getElementById('seat').value);
-        });
-    });
+    loadSelectedSession();
+    const isStudent = document.getElementById('isStudent');
+    if (isStudent) isStudent.addEventListener('change', updatePriceCalculation);
 });
 
-// Стили для бронирования
-const bookingStyle = document.createElement('style');
-bookingStyle.textContent = `
-    .session-preview {
-        padding: 20px;
-        background: var(--color-secondary);
-        border-radius: 12px;
-    }
-    
-    .preview-text {
-        text-align: center;
-        color: var(--color-muted);
-    }
-    
-    .selected-session h4 {
-        margin-top: 0;
-        color: var(--color-dark);
-    }
-    
-    .session-info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
-    }
-    
-    .info-item {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    .label {
-        font-weight: 600;
-        color: var(--color-muted);
-        font-size: 0.9rem;
-    }
-    
-    .value {
-        font-size: 1.1rem;
-    }
-    
-    .value.price {
-        color: var(--color-dark);
-        font-weight: 700;
-    }
-    
-    .form-group {
-        margin-bottom: 25px;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: var(--color-muted);
-    }
-    
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    
-    small {
-        display: block;
-        margin-top: 5px;
-        color: var(--color-muted);
-        font-size: 0.8rem;
-    }
-    
-    .seats-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 10px;
-        padding: 15px;
-        background: rgba(142, 228, 175, 0.1);
-        border-radius: 12px;
-    }
-    
-    .seat-option {
-        width: 50px;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: white;
-        border: 2px solid var(--color-primary);
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    
-    .seat-option:hover {
-        background: var(--color-primary);
-        color: white;
-        transform: scale(1.05);
-    }
-    
-    .seat-option.selected {
-        background: var(--color-dark);
-        color: white;
-        border-color: var(--color-dark);
-    }
-    
-    .no-seats {
-        color: #c0392b;
-        text-align: center;
-        width: 100%;
-        padding: 20px;
-    }
-    
-    .price-summary {
-        background: var(--color-secondary);
-        padding: 20px;
-        border-radius: 12px;
-        margin: 25px 0;
-    }
-    
-    .price-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        border-bottom: 1px dashed var(--color-primary);
-    }
-    
-    .price-row.discount {
-        color: var(--color-accent);
-    }
-    
-    .price-row.total {
-        border-bottom: none;
-        border-top: 2px solid var(--color-dark);
-        font-weight: 700;
-        font-size: 1.2rem;
-        color: var(--color-dark);
-    }
-    
-    .booking-actions {
-        display: flex;
-        gap: 15px;
-        margin-top: 25px;
-    }
-    
-    .booking-actions button {
-        flex: 1;
-    }
-    
-    .loading {
-        text-align: center;
-        padding: 20px;
-        color: var(--color-muted);
-    }
-    
-    .error-message {
-        background: rgba(192, 57, 43, 0.1);
-        color: #c0392b;
-        padding: 15px;
-        border-radius: 12px;
-        margin-top: 15px;
-        border-left: 4px solid #c0392b;
-    }
-    
-    .success-message {
-        text-align: center;
-    }
-    
-    .success-actions {
-        display: flex;
-        gap: 15px;
-        justify-content: center;
-        margin-top: 25px;
-    }
-    
-    .ticket {
-        max-width: 500px;
-        margin: 20px auto;
-        border: 3px solid var(--color-dark);
-        border-radius: 15px;
-        overflow: hidden;
-        background: white;
-    }
-    
-    .ticket-header {
-        background: var(--color-dark);
-        color: white;
-        padding: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .ticket-id {
-        font-family: monospace;
-        background: rgba(255,255,255,0.2);
-        padding: 5px 10px;
-        border-radius: 6px;
-        font-size: 0.9rem;
-    }
-    
-    .ticket-body {
-        padding: 25px;
-    }
-    
-    .ticket-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 1px dashed #eee;
-    }
-    
-    .seat-badge {
-        background: var(--color-dark);
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-    }
-    
-    .ticket-footer {
-        background: var(--color-secondary);
-        padding: 15px;
-        text-align: center;
-        font-size: 0.9rem;
-        color: var(--color-muted);
-    }
-    
-    @media (max-width: 600px) {
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-        
-        .success-actions {
-            flex-direction: column;
-        }
-    }
+/**
+ * 8. ДИНАМИЧЕСКИЕ СТИЛИ (Инъекция)
+ */
+const styleNode = document.createElement('style');
+styleNode.textContent = `
+    .dynamic-seats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 12px; max-width: 800px; margin: 0 auto; }
+    .seat-node { height: 55px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; border-radius: 10px; cursor: pointer; background: #379683; color: white; transition: 0.2s; border: 2px solid #2d7a6a; }
+    .seat-node.selected { background: #1a1a1a !important; color: #8ee4af !important; transform: scale(1.1); }
 `;
-document.head.appendChild(bookingStyle);
+document.head.appendChild(styleNode);
