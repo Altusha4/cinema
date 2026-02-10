@@ -10,12 +10,12 @@
 <body>
 <nav class="navbar">
     <a href="/" class="logo">🎬 CinemaGo</a>
-    <div class="nav-links">
-        <a href="/" class="nav-link active">Home</a>
+    <div class="nav-links" id="mainNavLinks">
+        <a href="/" class="nav-link">Home</a>
         <a href="/pages/index.html" class="nav-link">Search</a>
-        <a href="/pages/sessions.html" class="nav-link">Sessions</a>
-        <a href="/pages/booking.html" class="nav-link">Booking</a>
-        <a href="/pages/admin.html" class="nav-link">Admin</a>
+        <a href="/pages/sessions.html" class="nav-link user-only">Sessions</a>
+        <a href="/pages/booking.html" class="nav-link user-only">Booking</a>
+        <a href="/pages/admin.html" id="adminNavLink" class="nav-link" style="display:none;">Admin</a>
     </div>
     <div class="auth-buttons">
         <button id="loginBtn" class="secondary" onclick="goLogin()">Login</button>
@@ -23,15 +23,15 @@
     </div>
 </nav>
 
-<main class="dashboard-container">
+<main class="dashboard-container" id="dashboardMain">
     <div class="welcome-section card">
         <div class="user-info">
-            <h1>Welcome back, <span id="userName">Altynay</span>! 👋</h1>
+            <h1>Welcome back, <span id="userName">User</span>! 👋</h1>
             <p>Ready for another movie night at <span style="color: var(--color-dark); font-weight: 700;">AITU</span>?</p>
         </div>
         <div class="user-stats">
             <div class="stat-item tooltip">
-                <span class="stat-value" id="userBonuses">450 ₸</span>
+                <span class="stat-value" id="userBonuses">0 ₸</span>
                 <span class="stat-label">Bonuses</span>
             </div>
             <div class="stat-item highlight-border">
@@ -46,7 +46,7 @@
             <h3>🚀 Quick Actions</h3>
             <div class="action-buttons" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
                 <button onclick="location.href='/pages/index.html'" class="btn-shine">🔍 Find a Movie</button>
-                <button onclick="location.href='/pages/sessions.html'" class="secondary">📅 View Schedule</button>
+                <button onclick="location.href='/pages/sessions.html'" class="secondary user-only">📅 View Schedule</button>
                 <button onclick="window.print()" style="background: none; border: 1px solid var(--color-primary); color: var(--color-muted); font-size: 0.8rem; padding: 8px;">🖨️ Export Stats</button>
             </div>
         </div>
@@ -61,146 +61,174 @@
         </div>
     </div>
 
-    <div class="card">
-        <h3>🎫 Your Latest Bookings</h3>
+    <div class="card" id="ordersSection">
+        <h3>🎫 Latest System Bookings</h3>
         <div id="recentOrdersContainer" class="tickets-placeholder">
-            <div class="loader"></div>
-            <p>Checking your digital vault...</p>
+            <p>Select an option above to start.</p>
         </div>
     </div>
 </main>
 
+<script src="/static/js/navbar.js"></script>
 <script src="/static/js/app.js"></script>
+
 <script>
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        } catch (e) { return null; }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        fetchRecentOrders();
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            window.location.href = "/pages/auth.html";
+            return;
+        }
+
+        const payload = parseJwt(token);
+        const userRole = payload ? (payload.role || "user") : "user";
+        const currentPath = window.location.pathname;
+
+        // --- ЛОГИКА ДЛЯ АДМИНА ---
+        if (userRole === "admin") {
+            const isDashboard = currentPath === "/" || currentPath === "/index.html";
+
+            if (isDashboard && !currentPath.includes("/pages/")) {
+                document.getElementById('dashboardMain').style.display = 'none';
+                window.location.replace("/pages/admin.html");
+                return;
+            }
+
+            // Настройка навбара для админа
+            const navLinks = document.getElementById('mainNavLinks');
+            if (navLinks) {
+                navLinks.innerHTML = `
+                    <a href="/pages/admin.html" class="nav-link">Admin Panel</a>
+                    <a href="/pages/index.html" class="nav-link">Search</a>
+                `;
+            }
+
+            // Только админ может запрашивать общие заказы
+            fetchRecentOrders();
+        }
+
+        // --- ЛОГИКА ДЛЯ ЮЗЕРА ---
+        if (userRole !== "admin") {
+            if (payload && payload.username) {
+                document.getElementById("userName").textContent = payload.username;
+            }
+
+            // Прячем секцию общих заказов от греха подальше (чтобы не было 403)
+            document.getElementById("ordersSection").style.display = "none";
+
+            // Подсветка активной ссылки
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
         fetchDynamicRecommendation();
+        checkAuthUI();
     });
 
-    // Новая функция: Подгрузка случайного трендового фильма из твоего API
     async function fetchDynamicRecommendation() {
         const recContainer = document.getElementById('recommendationContent');
         try {
-            // Используем твой эндпоинт /movies с дефолтным ID или поиском трендов
-            const res = await fetch('/movies?id=634649'); // Например, Человек-паук или любой другой ID
+            const res = await fetch('/movies?id=634649');
             const movie = await res.json();
-
             recContainer.innerHTML = `
                 <p class="helper-text">Trending in your region</p>
                 <div class="mini-movie-card" onclick="location.href='/pages/index.html?id=${movie.id}'" style="cursor: pointer; padding: 15px; background: var(--color-secondary); border-radius: 15px; transition: 0.3s;">
                     <strong>${movie.title}</strong>
                     <span style="font-size: 0.85rem; color: var(--color-muted); display: block; margin-top: 5px;">
-                        ⭐ ${movie.vote_average || '8.5'} | ${movie.release_date.split('-')[0]}
+                        ⭐ ${movie.vote_average || '8.5'} | ${movie.release_date ? movie.release_date.split('-')[0] : '2026'}
                     </span>
                 </div>
             `;
         } catch (e) {
-            recContainer.innerHTML = `<p class="helper-text">Check out the latest Sci-Fi releases!</p>`;
+            recContainer.innerHTML = `<p class="helper-text">Check out the latest releases!</p>`;
         }
     }
 
     async function fetchRecentOrders() {
         const container = document.getElementById('recentOrdersContainer');
+        container.innerHTML = '<div class="loader"></div>';
         try {
+            if (typeof authFetch !== 'function') return;
             const res = await authFetch('/orders');
-            const orders = await res.json();
 
+            if (res.status === 403) {
+                container.innerHTML = "<p>Access denied.</p>";
+                return;
+            }
+
+            const orders = await res.json();
             if (orders && orders.length > 0) {
                 const recent = orders.slice(-3).reverse();
                 container.innerHTML = `
                     <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Movie Title</th>
-                                    <th>Seat</th>
-                                    <th>Price</th>
-                                    <th>Promo</th>
-                                </tr>
-                            </thead>
+                        <table style="width:100%">
                             <tbody>
                                 ${recent.map(o => `
-                                    <tr>
+                                    <tr style="border-bottom: 1px solid #eee">
                                         <td><strong>${o.movie_title}</strong></td>
-                                        <td><span class="status-badge">${o.seat || 'N/A'}</span></td>
                                         <td>${o.final_price} ₸</td>
-                                        <td><code style="background: var(--color-secondary); padding: 4px 8px; border-radius: 5px;">${o.promo_code}</code></td>
+                                        <td><code>${o.promo_code}</code></td>
                                     </tr>
                                 `).join('')}
                             </tbody>
                         </table>
                     </div>
-                    <div style="margin-top: 20px;">
-                        <button onclick="location.href='/pages/sessions.html'" class="secondary">Book Another Movie</button>
-                    </div>
                 `;
             } else {
-                container.innerHTML = `
-                    <div style="padding: 40px;">
-                        <p style="color: var(--color-muted); font-size: 1.1rem; margin-bottom: 20px;">You haven't booked any movies yet.</p>
-                        <button onclick="location.href='/pages/sessions.html'">Start Exploring</button>
-                    </div>
-                `;
+                container.innerHTML = `<p>No bookings in system.</p>`;
             }
         } catch (e) {
-            container.innerHTML = `<p>Error loading your bookings. Is the server running?</p>`;
+            container.innerHTML = `<p>Error loading bookings.</p>`;
         }
+    }
+
+    function checkAuthUI() {
+        const token = localStorage.getItem("token");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+
+        if (token) {
+            if (loginBtn) loginBtn.style.display = "none";
+            if (logoutBtn) logoutBtn.style.display = "inline-block";
+        } else {
+            if (loginBtn) loginBtn.style.display = "inline-block";
+            if (logoutBtn) logoutBtn.style.display = "none";
+        }
+    }
+
+    function goLogin() { window.location.href = "/pages/auth.html"; }
+    function logout() {
+        localStorage.clear();
+        window.location.href = "/pages/auth.html";
     }
 </script>
 
 <style>
-    /* Дополнительные микро-стили для Dashboard */
     .highlight-border { border: 2px solid var(--color-dark) !important; }
     .loader {
         border: 4px solid var(--color-secondary);
         border-top: 4px solid var(--color-dark);
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        animation: spin 1s linear infinite;
-        margin: 10px auto;
+        border-radius: 50%; width: 30px; height: 30px;
+        animation: spin 1s linear infinite; margin: 10px auto;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
     .mini-movie-card:hover {
         background: white !important;
         transform: scale(1.02);
         box-shadow: 4px 4px 0px var(--color-primary);
     }
 </style>
-<script>
-    function goLogin() {
-        window.location.href = "/pages/auth.html";
-    }
-
-    function logout() {
-        localStorage.removeItem("token");
-        window.location.href = "/pages/auth.html";
-    }
-
-    function checkAuthUI() {
-        const token = localStorage.getItem("token");
-
-        const loginBtn = document.getElementById("loginBtn");
-        const logoutBtn = document.getElementById("logoutBtn");
-
-        if (!loginBtn || !logoutBtn) return;
-
-        if (token) {
-            loginBtn.style.display = "none";
-            logoutBtn.style.display = "inline-block";
-        } else {
-            loginBtn.style.display = "inline-block";
-            logoutBtn.style.display = "none";
-        }
-    }
-
-    // 🔒 защита dashboard
-    if (!localStorage.getItem("token")) {
-        window.location.href = "/pages/auth.html";
-    }
-
-    document.addEventListener("DOMContentLoaded", checkAuthUI);
-</script>
 </body>
 </html>

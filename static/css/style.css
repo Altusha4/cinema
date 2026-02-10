@@ -594,3 +594,12 @@ input.invalid {
   font-size: 0.8rem;
   margin-top: 4px;
 }
+
+body.admin-mode .user-only,
+body.admin-mode .nav-links a:not(.admin-link) {
+    display: none !important;
+}
+
+.admin-navbar {
+    justify-content: space-between;
+}

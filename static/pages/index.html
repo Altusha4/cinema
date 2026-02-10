@@ -16,7 +16,6 @@
             --card-width: 220px;
         }
 
-        /* Принудительная карусель */
         #featuredMovies {
             display: flex !important;
             flex-direction: row !important;
@@ -111,9 +110,6 @@
             100% { background-position: -200% 0; }
         }
 
-        #movieDetails { transition: opacity 0.5s ease; }
-
-        /* --- НОВЫЕ СТИЛИ ДЛЯ ЖИВОГО ПОИСКА --- */
         .suggestions-box {
             position: absolute;
             top: 55px;
@@ -140,31 +136,21 @@
         }
 
         .suggestion-item:hover { background: var(--color-secondary); }
-
-        .suggestion-item img {
-            width: 40px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
-            background: #eee;
-        }
-
+        .suggestion-item img { width: 40px; height: 60px; object-fit: cover; border-radius: 8px; background: #eee; }
         .suggestion-info { display: flex; flex-direction: column; gap: 2px; }
-
         .suggestion-title { font-weight: 800; color: var(--color-dark); font-size: 0.95rem; }
-
         .suggestion-year { font-size: 0.8rem; color: var(--color-muted); font-weight: 600; }
     </style>
 </head>
 <body>
 <nav class="navbar">
     <a href="/" class="logo">🎬 CinemaGo</a>
-    <div class="nav-links">
-        <a href="/" class="nav-link active">Home</a>
-        <a href="/pages/index.html" class="nav-link">Search</a>
-        <a href="/pages/sessions.html" class="nav-link">Sessions</a>
-        <a href="/pages/booking.html" class="nav-link">Booking</a>
-        <a href="/pages/admin.html" class="nav-link">Admin</a>
+    <div class="nav-links" id="mainNavLinks">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/pages/index.html" class="nav-link active">Search</a>
+        <a href="/pages/sessions.html" class="nav-link user-only">Sessions</a>
+        <a href="/pages/booking.html" class="nav-link user-only">Booking</a>
+        <a href="/pages/admin.html" id="adminNavLink" class="nav-link" style="display:none;">Admin</a>
     </div>
     <div class="auth-buttons">
         <button id="loginBtn" class="secondary" onclick="goLogin()">Login</button>
@@ -216,7 +202,7 @@
                 </div>
 
                 <div class="action-row">
-                    <button onclick="navigateTo('sessions')" class="btn-shine" style="padding: 18px 30px; font-size: 1.1rem;">📅 View Showtimes</button>
+                    <button id="viewShowtimesBtn" onclick="navigateTo('sessions')" class="btn-shine" style="padding: 18px 30px; font-size: 1.1rem;">📅 View Showtimes</button>
                 </div>
             </div>
         </div>
@@ -251,7 +237,14 @@
 <script src="/static/js/navbar.js"></script>
 <script src="/static/js/movies.js?v=1.7"></script>
 <script>
-    // --- ЛОГИКА ЖИВОГО ПОИСКА С DEBOUNCE ---
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        } catch (e) { return null; }
+    }
+
     function debounce(func, timeout = 400) {
         let timer;
         return (...args) => {
@@ -272,7 +265,6 @@
             if (!res.ok) return;
             const movie = await res.json();
 
-            // Если бэкенд возвращает один объект (текущая логика Go)
             if (movie && movie.title) {
                 const year = movie.release_date ? movie.release_date.split('-')[0] : 'N/A';
                 const poster = movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : 'https://via.placeholder.com/92x138';
@@ -303,18 +295,38 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem("token");
+        const payload = parseJwt(token);
+        const userRole = payload ? (payload.role || "user") : "user";
+        const currentPath = window.location.pathname;
+
+        // --- ЛОГИКА ИЗОЛЯЦИИ АДМИНА ---
+        if (userRole === "admin") {
+            const navLinks = document.getElementById('mainNavLinks');
+            if (navLinks) {
+                navLinks.innerHTML = `
+                    <a href="/pages/admin.html" class="nav-link">Admin Panel</a>
+                    <a href="/pages/index.html" class="nav-link active">Search</a>
+                `;
+            }
+            // Скрываем кнопку перехода к сеансам (админу не нужно покупать билеты)
+            const showtimesBtn = document.getElementById('viewShowtimesBtn');
+            if (showtimesBtn) showtimesBtn.style.display = 'none';
+        } else {
+            const adminLink = document.getElementById("adminNavLink");
+            if (adminLink) adminLink.style.display = "none";
+        }
+
         if (typeof loadFeaturedMovies === 'function') {
             loadFeaturedMovies();
         }
 
-        // Слушатель для живого поиска
         const queryInput = document.getElementById('movieQuery');
         if (queryInput) {
             const processInput = debounce((e) => liveSearch(e.target.value));
             queryInput.addEventListener('input', processInput);
         }
 
-        // Скрыть подсказки при клике вне
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-container')) {
                 document.getElementById('searchSuggestions').style.display = 'none';
@@ -327,6 +339,8 @@
             input.value = urlParams.get('id');
             setTimeout(() => searchMovie(), 300);
         }
+
+        checkAuthUI();
     });
 
     function quickSearch(query) {
@@ -334,6 +348,22 @@
         input.value = query;
         searchMovie();
         window.scrollTo({ top: 100, behavior: 'smooth' });
+    }
+
+    function checkAuthUI() {
+        const token = localStorage.getItem("token");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (token) {
+            if (loginBtn) loginBtn.style.display = "none";
+            if (logoutBtn) logoutBtn.style.display = "inline-block";
+        }
+    }
+
+    function goLogin() { window.location.href = "/pages/auth.html"; }
+    function logout() {
+        localStorage.clear();
+        window.location.href = "/pages/auth.html";
     }
 </script>
 </body>
