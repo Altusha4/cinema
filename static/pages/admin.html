@@ -15,7 +15,11 @@
         <a href="/pages/index.html" class="nav-link">Search</a>
         <a href="/pages/sessions.html" class="nav-link">Sessions</a>
         <a href="/pages/booking.html" class="nav-link">Booking</a>
-        <a href="/pages/admin.html" class="nav-link active">Admin</a>
+        <a href="/pages/admin.html" class="nav-link">Admin</a>
+    </div>
+    <div class="auth-buttons">
+        <button id="loginBtn" class="secondary" onclick="goLogin()">Login</button>
+        <button id="logoutBtn" class="secondary" onclick="logout()" style="display:none;">Logout</button>
     </div>
 </nav>
 
@@ -116,8 +120,9 @@
     </div>
 
 </main>
-
+<script src="/static/js/authFetch.js"></script>
 <script src="/static/js/app.js"></script>
+<script src="/static/js/navbar.js"></script>
 <script src="/static/js/admin.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {

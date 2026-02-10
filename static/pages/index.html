@@ -160,11 +160,15 @@
 <nav class="navbar">
     <a href="/" class="logo">🎬 CinemaGo</a>
     <div class="nav-links">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/pages/index.html" class="nav-link active">Search</a>
+        <a href="/" class="nav-link active">Home</a>
+        <a href="/pages/index.html" class="nav-link">Search</a>
         <a href="/pages/sessions.html" class="nav-link">Sessions</a>
         <a href="/pages/booking.html" class="nav-link">Booking</a>
         <a href="/pages/admin.html" class="nav-link">Admin</a>
+    </div>
+    <div class="auth-buttons">
+        <button id="loginBtn" class="secondary" onclick="goLogin()">Login</button>
+        <button id="logoutBtn" class="secondary" onclick="logout()" style="display:none;">Logout</button>
     </div>
 </nav>
 
@@ -244,6 +248,7 @@
 </main>
 
 <script src="/static/js/app.js?v=1.7"></script>
+<script src="/static/js/navbar.js"></script>
 <script src="/static/js/movies.js?v=1.7"></script>
 <script>
     // --- ЛОГИКА ЖИВОГО ПОИСКА С DEBOUNCE ---

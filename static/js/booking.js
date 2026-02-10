@@ -1,10 +1,21 @@
-/**
- * CinemaGo - Final Professional Booking & PDF Module
- * Разработано для Алтынай (AITU)
- * Исправлено: Динамическая сетка, генерация PDF с постером, расчет скидок.
- */
+function authFetch(url, options = {}) {
+    const token = localStorage.getItem("token");
 
-// Глобальные переменные состояния
+    if (!token) {
+        window.location.href = "/pages/auth.html";
+        return Promise.reject("No auth token");
+    }
+
+    return fetch(url, {
+        ...options,
+        headers: {
+            ...(options.headers || {}),
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        }
+    });
+}
+
 let selectedSessionData = null;
 let availableSeats = [];
 
@@ -79,7 +90,7 @@ async function fetchAvailableSeats() {
     if (!selectedSessionData) return;
     try {
         const dateStr = selectedSessionData.time.slice(0, 10);
-        const res = await fetch(`/sessions?date=${dateStr}`);
+        const res = await authFetch(`/sessions?date=${dateStr}`);
         if (!res.ok) throw new Error("Server response not ok");
 
         const sessions = await res.json();
@@ -181,13 +192,17 @@ async function bookTicket() {
     bookButton.textContent = 'Processing...';
 
     try {
-        const res = await fetch('/book', {
+        const res = await authFetch('/book', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email, session_id: selectedSessionData.id, seat, is_student: isStudent, age
+                email,
+                session_id: selectedSessionData.id,
+                seat,
+                is_student: isStudent,
+                age
             })
         });
+
 
         const data = await res.json();
         if (res.ok) {
@@ -203,9 +218,6 @@ async function bookTicket() {
     }
 }
 
-/**
- * 6. ОТОБРАЖЕНИЕ БИЛЕТА (Инлайновые стили для PDF)
- */
 function showSuccessBooking(order) {
     document.getElementById('bookingForm').style.display = 'none';
     document.getElementById('successBooking').style.display = 'block';
