@@ -30,6 +30,8 @@ func main() {
 		log.Println("Note: Using system environment variables:", err)
 	}
 
+	service.InitJWT()
+
 	if err := service.SendEmail("workworkwork11072005@gmail.com", "CinemaGo test", "Hello from Go"); err != nil {
 		log.Println("TEST EMAIL FAILED:", err)
 	} else {
@@ -67,10 +69,12 @@ func main() {
 	})
 
 	mux.HandleFunc("/movies", getMovieHandler)
-	mux.HandleFunc("/book", createBookingHandler)
-	mux.HandleFunc("/orders", listOrdersHandler)
+	mux.Handle("/book", service.AuthMiddleware(http.HandlerFunc(createBookingHandler)))
+	mux.Handle("/orders", service.AuthMiddleware(http.HandlerFunc(listOrdersHandler)))
 	mux.HandleFunc("/sessions", sessionsHandler)
-	mux.HandleFunc("/reserve", reserveSeatHandler)
+	mux.Handle("/reserve", service.AuthMiddleware(http.HandlerFunc(reserveSeatHandler)))
+	mux.HandleFunc("/login", api.LoginHandler)
+	mux.HandleFunc("/register", api.RegisterHandler)
 
 	fmt.Printf("🎬 CinemaGo Server running at http://localhost:%s\n", port)
 	fmt.Printf("📁 Static files: http://localhost:%s/static/\n", port)

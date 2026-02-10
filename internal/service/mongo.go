@@ -54,4 +54,3 @@ func CountersCollection() *mongo.Collection {
 func MoviesCollection() *mongo.Collection {
 	return MongoDB.Collection("movies")
 }
-

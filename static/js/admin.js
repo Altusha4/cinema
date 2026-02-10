@@ -11,7 +11,7 @@ async function loadAdminData() {
 async function loadStatistics() {
     try {
         // Загрузка заказов
-        const ordersRes = await fetch('/orders');
+        const ordersRes = await authFetch('/orders');
         const orders = await ordersRes.ok ? await ordersRes.json() : [];
         
         // Расчет статистики
@@ -23,7 +23,7 @@ async function loadStatistics() {
         
         // Загрузка сеансов
         const today = new Date().toISOString().slice(0, 10);
-        const sessionsRes = await fetch(`/sessions?date=${today}`);
+        const sessionsRes = await authFetch(`/sessions?date=${today}`);
         const sessions = sessionsRes.ok ? await sessionsRes.json() : [];
         
         document.getElementById('totalSessions').textContent = sessions.length;
@@ -36,7 +36,7 @@ async function loadStatistics() {
 async function loadSessionsForAdmin() {
     try {
         const today = new Date().toISOString().slice(0, 10);
-        const res = await fetch(`/sessions?date=${today}`);
+        const res = await authFetch(`/sessions?date=${today}`);
         const sessions = await res.json();
         
         renderAdminSessions(sessions);
@@ -83,7 +83,7 @@ function renderAdminSessions(sessions) {
 
 async function loadOrdersForAdmin() {
     try {
-        const res = await fetch('/orders');
+        const res = await authFetch('/orders');
         const orders = await res.json();
         
         renderAdminOrders(orders);
@@ -161,7 +161,7 @@ async function createSession() {
     const startDateTime = new Date(startTime);
     
     try {
-        const response = await fetch('/sessions', {
+        const response = await authFetch('/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -202,21 +202,28 @@ function clearSessionForm() {
 }
 
 async function deleteSession(sessionId) {
-    if (!confirm('Are you sure you want to delete this session?')) {
-        return;
-    }
-    
+    const confirmed = confirm(`Are you sure you want to delete session #${sessionId}?`);
+    if (!confirmed) return;
+
     try {
-        // Note: You'll need to add a DELETE endpoint to your backend
-        // For now, we'll just show a notification
-        showNotification(`Delete functionality would remove session #${sessionId}`, 'info');
-        // In production: await fetch(`/sessions/${sessionId}`, { method: 'DELETE' });
-        
-        // Simulate deletion
-        loadSessionsForAdmin();
-        
+        const res = await authFetch(`/sessions/${sessionId}`, {
+            method: 'DELETE'
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Failed to delete session');
+        }
+
+        showNotification(`Session #${sessionId} deleted successfully`, 'success');
+
+        // Перезагружаем данные
+        await loadSessionsForAdmin();
+        await loadStatistics();
+
     } catch (error) {
-        showNotification('Failed to delete session', 'error');
+        console.error('Delete session error:', error);
+        showNotification(error.message || 'Delete failed', 'error');
     }
 }
 

@@ -450,3 +450,147 @@ pre {
     font-size: 0.75rem;
     color: var(--color-muted);
 }
+/* ===== AUTH PAGE ONLY ===== */
+body.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eef5df; /* тот же фон, что у тебя */
+}
+
+/* основной контейнер */
+.auth-container {
+  width: 100%;
+  max-width: 420px;
+  padding: 30px 28px;
+  border-radius: 16px;
+  background: transparent; /* НЕ меняем тему */
+}
+
+/* логотип */
+.auth-container h1,
+.auth-container .logo {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* табы LOGIN / REGISTER */
+.auth-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.auth-tabs button {
+  flex: 1;
+}
+
+/* формы */
+.auth-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* инпуты */
+.auth-container input {
+  width: 100%;
+}
+
+/* кнопка входа */
+.auth-container .submit-btn {
+  margin-top: 10px;
+}
+
+/* статус */
+#status {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+}
+/* ===== AUTH PAGE LAYOUT ===== */
+body.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eef5df;
+}
+
+/* ===== GLASS CARD ===== */
+.auth-container {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: 20px;
+
+  /* glass effect */
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+
+  text-align: center;
+}
+
+/* ===== LOGO ===== */
+.auth-container h1,
+.auth-container .logo {
+  margin-bottom: 20px;
+}
+
+/* ===== TABS ===== */
+.auth-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.auth-tabs button {
+  flex: 1;
+}
+
+/* ===== FORMS ===== */
+#loginForm,
+#registerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ===== INPUTS ===== */
+.auth-container input {
+  width: 100%;
+  text-align: left;
+}
+
+/* ===== BUTTON ===== */
+.auth-container button {
+  align-self: center;
+}
+
+/* ===== STATUS TEXT ===== */
+#status {
+  margin-top: 14px;
+  font-size: 14px;
+  text-align: center;
+}
+input.valid {
+  border: 2px solid #4caf50;
+  background: #f1fff4;
+}
+
+input.invalid {
+  border: 2px solid #e74c3c;
+  background: #fff5f5;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
