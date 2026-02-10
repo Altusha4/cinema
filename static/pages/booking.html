@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* Стили схемы зала */
         .seats-container {
             background: #111;
             padding: 40px 20px;
@@ -64,7 +63,7 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
-        /* --- СТИЛЬ НОВОГО БИЛЕТА С ПОСТЕРОМ --- */
+        /* --- СТИЛЬ БИЛЕТА --- */
         .ticket-download-card {
             width: 380px;
             margin: 20px auto;
@@ -83,7 +82,6 @@
             position: relative;
         }
 
-        /* Эффект затухания на постере */
         .ticket-poster-header::after {
             content: '';
             position: absolute;
@@ -91,82 +89,27 @@
             background: linear-gradient(transparent, white);
         }
 
-        .ticket-info-section {
-            padding: 25px;
-            position: relative;
-        }
-
-        .ticket-brand {
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
-        }
-
-        .ticket-movie-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #1a1a1a;
-            margin: 0 0 20px 0;
-            line-height: 1.2;
-        }
-
-        .ticket-meta-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .meta-item label {
-            display: block;
-            font-size: 0.65rem;
-            color: #aaa;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .meta-item span {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #333;
-        }
-
-        .ticket-footer-price {
-            border-top: 2px dashed #eee;
-            padding-top: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .final-price-tag {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: #379683;
-        }
-
-        .bonus-text {
-            font-size: 0.75rem;
-            color: #888;
-            background: #f8f9fa;
-            padding: 5px 10px;
-            border-radius: 20px;
-        }
+        .ticket-info-section { padding: 25px; position: relative; }
+        .ticket-brand { font-size: 0.7rem; font-weight: 800; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        .ticket-movie-title { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; margin: 0 0 20px 0; line-height: 1.2; }
+        .ticket-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .meta-item label { display: block; font-size: 0.65rem; color: #aaa; text-transform: uppercase; font-weight: 700; }
+        .meta-item span { font-size: 1rem; font-weight: 700; color: #333; }
+        .ticket-footer-price { border-top: 2px dashed #eee; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .final-price-tag { font-size: 1.4rem; font-weight: 800; color: #379683; }
+        .bonus-text { font-size: 0.75rem; color: #888; background: #f8f9fa; padding: 5px 10px; border-radius: 20px; }
     </style>
 </head>
 <body>
 
 <nav class="navbar">
     <a href="/" class="logo">🎬 CinemaGo</a>
-    <div class="nav-links">
+    <div class="nav-links" id="mainNavLinks">
         <a href="/" class="nav-link">Home</a>
         <a href="/pages/index.html" class="nav-link">Search</a>
         <a href="/pages/sessions.html" class="nav-link">Sessions</a>
-        <a href="/pages/booking.html" class="nav-link">Booking</a>
-        <a href="/pages/admin.html" class="nav-link">Admin</a>
+        <a href="/pages/booking.html" class="nav-link active">Booking</a>
+        <a href="/pages/admin.html" id="adminNavLink" class="nav-link" style="display:none;">Admin</a>
     </div>
     <div class="auth-buttons">
         <button id="loginBtn" class="secondary" onclick="goLogin()">Login</button>
@@ -174,7 +117,7 @@
     </div>
 </nav>
 
-<main class="container">
+<main class="container" id="pageContent">
     <h1>🎟️ Finalize Your Booking</h1>
 
     <div class="card">
@@ -186,44 +129,36 @@
 
     <div class="card" id="bookingForm" style="display: none;">
         <h3>👤 Personal Information</h3>
-
         <div class="form-group">
             <label for="email">Email Address</label>
             <input type="email" id="email" placeholder="student@aitu.edu.kz" required>
         </div>
-
         <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
             <div class="form-group" style="flex: 1; min-width: 150px;">
                 <label for="age">Your Age</label>
                 <input type="number" id="age" placeholder="18" min="0" required>
             </div>
-
             <div class="form-group" style="flex: 1; min-width: 150px;">
                 <label for="seat">Selected Seat</label>
-                <input type="text" id="seat" placeholder="Click on map..." readonly required
-                       style="background: #f8f9fa; font-weight: 800;">
+                <input type="text" id="seat" placeholder="Click on map..." readonly required style="background: #f8f9fa; font-weight: 800;">
             </div>
         </div>
-
         <div class="form-group">
             <label>🎬 Choose your seat</label>
             <div id="availableSeats" class="seats-container"></div>
         </div>
-
         <div class="form-group">
             <label class="student-option" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                 <input type="checkbox" id="isStudent" checked>
                 <span style="font-weight: 700;">AITU Student Discount (20%)</span>
             </label>
         </div>
-
         <div class="price-summary" style="background: #f8f9fa; padding: 20px; border-radius: 15px; margin: 25px 0;">
             <div class="price-row" style="display: flex; justify-content: space-between;">
                 <span>Total Amount:</span>
                 <strong id="totalPrice" style="font-size: 1.4rem; color: var(--color-dark);">0 ₸</strong>
             </div>
         </div>
-
         <div class="booking-actions" style="display: flex; gap: 15px;">
             <button onclick="bookTicket()" id="bookButton" style="flex: 2; height: 55px;">Confirm Booking</button>
             <button onclick="window.location.href='/pages/sessions.html'" class="secondary" style="flex: 1;">Back</button>
@@ -232,29 +167,74 @@
 
     <div class="card" id="successBooking" style="display: none; text-align: center;">
         <h2 style="color: #379683;">✨ Order Confirmed!</h2>
-        <p>Your ticket is ready. See you at the movies!</p>
-
-        <div id="ticketDetails" style="display: flex; justify-content: center; padding: 20px;">
-        </div>
-
+        <div id="ticketDetails" style="display: flex; justify-content: center; padding: 20px;"></div>
         <div class="success-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
-            <button onclick="downloadTicket()" class="primary-action" style="padding: 12px 30px; background: #379683; color: white; border-radius: 10px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
+            <button onclick="downloadTicket()" style="padding: 12px 30px; background: #379683; color: white; border-radius: 10px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
             <button onclick="location.href='/'" class="secondary" style="padding: 12px 30px;">Home</button>
         </div>
     </div>
 </main>
 
-[Image of a modern movie ticket design with a cinematic background image, bold movie title, seat details, and a clear total price]
+
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/navbar.js"></script>
 <script src="/static/js/booking.js"></script>
 <script>
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        } catch (e) { return null; }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            window.location.href = "/pages/auth.html";
+            return;
+        }
+
+        const payload = parseJwt(token);
+        const userRole = payload ? (payload.role || "") : "user";
+
+        if (userRole === "admin") {
+            document.getElementById('pageContent').style.display = 'none';
+            window.location.replace("/pages/admin.html");
+            return;
+        }
+
         if (typeof loadSelectedSession === 'function') {
             loadSelectedSession();
         }
+
+        checkAuthUI();
     });
+
+    function checkAuthUI() {
+        const token = localStorage.getItem("token");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const adminLink = document.getElementById("adminNavLink");
+
+        if (token) {
+            if (loginBtn) loginBtn.style.display = "none";
+            if (logoutBtn) logoutBtn.style.display = "inline-block";
+
+            const payload = parseJwt(token);
+            if (adminLink) {
+                adminLink.style.display = (payload && payload.role === "admin") ? "inline-block" : "none";
+            }
+        }
+    }
+
+    function goLogin() { window.location.href = "/pages/auth.html"; }
+    function logout() {
+        localStorage.clear();
+        window.location.href = "/pages/auth.html";
+    }
 </script>
 </body>
 </html>

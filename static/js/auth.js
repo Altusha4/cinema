@@ -1,9 +1,4 @@
-console.log("🔥 auth.js LOADED");
-
-
-// ===============================
-// VALIDATION HELPERS
-// ===============================
+console.log("auth.js LOADED");
 
 function showError(input, message) {
   input.classList.add("invalid");
@@ -40,20 +35,25 @@ function isValidUsername(username) {
   return username.length >= 3;
 }
 
+function getRoleFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role;
+  } catch (e) {
+    return 'user';
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ alt.js ready");
+  console.log("auth.js ready");
 
   const statusEl = document.getElementById("status");
-
   const loginTab = document.getElementById("loginTab");
   const registerTab = document.getElementById("registerTab");
-
   const loginForm = document.getElementById("loginForm");
   const registerForm = document.getElementById("registerForm");
-
   const loginBtn = document.getElementById("loginBtn");
   const registerBtn = document.getElementById("registerBtn");
-
 
   if (loginTab && registerTab) {
     loginTab.onclick = () => {
@@ -73,10 +73,9 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-
   if (loginBtn) {
     loginBtn.onclick = async () => {
-      console.log("👉 LOGIN CLICK");
+      console.log("LOGIN CLICK");
 
       const emailInput = document.getElementById("loginEmail");
       const passwordInput = document.getElementById("loginPassword");
@@ -112,8 +111,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (res.ok && data.token) {
+          localStorage.clear();
           localStorage.setItem("token", data.token);
-          window.location.href = "/";
+
+          const userRole = data.role || getRoleFromToken(data.token);
+
+          if (userRole === "admin") {
+            window.location.href = "/pages/admin.html";
+          } else {
+            window.location.href = "/";
+          }
         } else {
           statusEl.textContent = data.error || "Login failed";
         }
@@ -126,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (registerBtn) {
     registerBtn.onclick = async () => {
-      console.log("👉 REGISTER CLICK");
+      console.log("REGISTER CLICK");
 
       const emailInput = document.getElementById("regEmail");
       const usernameInput = document.getElementById("regUsername");
@@ -171,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (res.ok) {
-          statusEl.textContent = "✅ Account created. Please login.";
+          statusEl.textContent = "Account created. Please login.";
           loginTab.click();
         } else {
           statusEl.textContent = data.error || "Registration failed";

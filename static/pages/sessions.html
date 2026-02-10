@@ -9,12 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* Глобальное выравнивание секции фильтров */
         .filters-container {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
-            align-items: flex-end; /* Выравнивание всех элементов по нижней линии */
+            align-items: flex-end;
             margin-top: 20px;
         }
 
@@ -34,7 +33,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Принудительная одинаковая высота для всех полей и кнопок */
         .filters-container select,
         .filters-container input,
         .filters-container button {
@@ -45,19 +43,18 @@
             border: 2px solid var(--color-primary);
         }
 
-        /* Специфичные правки для чекбокса, чтобы он стоял ровно */
         .checkbox-wrapper {
             display: flex;
             align-items: center;
             gap: 10px;
-            height: 50px; /* Совпадает с высотой кнопки */
+            height: 50px;
             cursor: pointer;
             font-weight: 700;
             color: var(--color-dark);
         }
 
         .checkbox-wrapper input {
-            height: 20px !important; /* Чекбокс не должен быть 50px */
+            height: 20px !important;
             width: 20px;
             cursor: pointer;
         }
@@ -97,12 +94,12 @@
 
 <nav class="navbar">
     <a href="/" class="logo">🎬 CinemaGo</a>
-    <div class="nav-links">
+    <div class="nav-links" id="mainNavLinks">
         <a href="/" class="nav-link">Home</a>
         <a href="/pages/index.html" class="nav-link">Search</a>
-        <a href="/pages/sessions.html" class="nav-link">Sessions</a>
+        <a href="/pages/sessions.html" class="nav-link active">Sessions</a>
         <a href="/pages/booking.html" class="nav-link">Booking</a>
-        <a href="/pages/admin.html" class="nav-link">Admin</a>
+        <a href="/pages/admin.html" id="adminNavLink" class="nav-link" style="display:none;">Admin</a>
     </div>
     <div class="auth-buttons">
         <button id="loginBtn" class="secondary" onclick="goLogin()">Login</button>
@@ -110,7 +107,7 @@
     </div>
 </nav>
 
-<main class="container">
+<main class="container" id="pageContent">
     <h1>🗓️ Cinema Schedule</h1>
 
     <div class="card">
@@ -208,14 +205,36 @@
     </div>
 </main>
 
-
-
 <script src="/static/js/app.js"></script>
 <script src="/static/js/navbar.js"></script>
 <script src="/static/js/sessions.js"></script>
 
 <script>
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        } catch (e) { return null; }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            window.location.href = "/pages/auth.html";
+            return;
+        }
+
+        const payload = parseJwt(token);
+        const userRole = payload ? (payload.role || "") : "user";
+
+        if (userRole === "admin") {
+            document.getElementById('pageContent').style.display = 'none';
+            window.location.replace("/pages/admin.html");
+            return;
+        }
+
         const today = new Date().toISOString().slice(0, 10);
         const dateInput = document.getElementById('dateInput');
         if (dateInput) {
@@ -229,14 +248,39 @@
                 const s = JSON.parse(saved);
                 document.getElementById('selectedMovie').textContent = s.title;
                 document.getElementById('selectedCinema').textContent = s.cinema;
-                document.getElementById('selectedTime').textContent = typeof formatDateTime === 'function' ? formatDateTime(s.time) : s.time;
-                document.getElementById('selectedPrice').textContent = typeof formatPrice === 'function' ? formatPrice(s.price) : s.price + ' ₸';
+                document.getElementById('selectedTime').textContent = s.time;
+                document.getElementById('selectedPrice').textContent = s.price + ' ₸';
                 document.getElementById('selectedSessionInfo').style.display = 'block';
             } catch (e) { console.error(e); }
         }
 
         setTimeout(() => { if (typeof applyFilters === 'function') applyFilters(); }, 400);
+
+        checkAuthUI();
     });
+
+    function checkAuthUI() {
+        const token = localStorage.getItem("token");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const adminLink = document.getElementById("adminNavLink");
+
+        if (token) {
+            loginBtn.style.display = "none";
+            logoutBtn.style.display = "inline-block";
+
+            const payload = parseJwt(token);
+            if (adminLink) {
+                adminLink.style.display = (payload && payload.role === "admin") ? "inline-block" : "none";
+            }
+        }
+    }
+
+    function goLogin() { window.location.href = "/pages/auth.html"; }
+    function logout() {
+        localStorage.clear();
+        window.location.href = "/pages/auth.html";
+    }
 </script>
 
 </body>

@@ -34,6 +34,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Email:    input.Email,
 		Username: input.Username,
 		Password: hash,
+		Role:     "user", // По умолчанию новый пользователь — обычный юзер
 	}
 
 	if err := models.CreateUser(user); err != nil {
@@ -60,8 +61,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok, _ := models.GetUserByEmail(input.Email)
-	if !ok {
+	user, ok, err := models.GetUserByEmail(input.Email)
+	if err != nil || !ok {
 		writeJSON(w, 401, map[string]string{"error": "invalid credentials"})
 		return
 	}
@@ -71,9 +72,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, _ := service.GenerateJWT(user.Email, user.Username)
+	token, err := service.GenerateJWT(user.Email, user.Username, user.Role)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "could not generate token"})
+		return
+	}
 
 	writeJSON(w, 200, map[string]string{
-		"token": token,
+		"token":    token,
+		"role":     user.Role,
+		"username": user.Username,
 	})
 }
