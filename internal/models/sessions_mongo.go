@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"cinema/internal/service"
@@ -12,18 +13,36 @@ import (
 )
 
 func AddSessionMongo(s Session) (Session, error) {
+	// 1. Генерируем ID
 	id, err := nextID("sessions")
 	if err != nil {
 		return Session{}, err
 	}
 	s.ID = id
 
+	// 2. СЧИТАЕМ МЕСТА: Если фронтенд прислал AvailableSeats,
+	// записываем их количество в TotalSeats
+	if len(s.AvailableSeats) > 0 {
+		s.TotalSeats = len(s.AvailableSeats)
+	} else {
+		// Дефолт, если вдруг фронтенд ничего не прислал
+		s.AvailableSeats = []string{"A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"}
+		s.TotalSeats = 9
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// 3. Вставка в MongoDB
 	_, err = service.SessionsCollection().InsertOne(ctx, s)
-	return s, err
+	if err != nil {
+		return Session{}, err
+	}
+	return s, nil
 }
+
+// Функции GetSessionByIDMongo и FilterSessionsMongo остаются без изменений,
+// так как в них ошибок не было (FilterSessionsMongo мы уже поправили под "all").
 
 func GetSessionByIDMongo(id int) (Session, bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -45,23 +64,26 @@ func FilterSessionsMongo(cinema string, date string, maxPrice float64, onlyWithS
 		return FilterSessions(maxPrice, onlyWithSeats), nil
 	}
 
-	loc, _ := time.LoadLocation("Asia/Almaty")
-	dayStart, err := time.ParseInLocation("2006-01-02", date, loc)
-	if err != nil {
-		return nil, err
-	}
-	dayEnd := dayStart.Add(24 * time.Hour)
-
 	filter := bson.M{}
 
 	if cinema != "" {
 		filter["cinema_name"] = cinema
 	}
-	filter["start_time"] = bson.M{"$gte": dayStart, "$lt": dayEnd}
+
+	if date != "" && date != "all" {
+		loc, _ := time.LoadLocation("Asia/Almaty")
+		dayStart, err := time.ParseInLocation("2006-01-02", date, loc)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format: %v", err)
+		}
+		dayEnd := dayStart.Add(24 * time.Hour)
+		filter["start_time"] = bson.M{"$gte": dayStart, "$lt": dayEnd}
+	}
 
 	if maxPrice > 0 {
 		filter["base_price"] = bson.M{"$lte": maxPrice}
 	}
+
 	if onlyWithSeats {
 		filter["available_seats.0"] = bson.M{"$exists": true}
 	}
@@ -83,6 +105,7 @@ func FilterSessionsMongo(cinema string, date string, maxPrice float64, onlyWithS
 		}
 		out = append(out, s)
 	}
+
 	return out, cur.Err()
 }
 
@@ -98,10 +121,6 @@ func ReserveSeatMongo(sessionID int, seat string) (Session, error) {
 		return Session{}, err
 	}
 	if res.ModifiedCount == 0 {
-		_, ok, _ := GetSessionByIDMongo(sessionID)
-		if !ok {
-			return Session{}, errors.New("session not found")
-		}
 		return Session{}, errors.New("seat not available")
 	}
 

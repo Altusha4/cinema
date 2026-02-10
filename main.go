@@ -17,7 +17,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// loggingMiddleware логирует каждый входящий запрос
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -44,18 +43,15 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// 1. Раздача статических файлов (CSS, JS, Images)
-	// Доступны по пути /static/...
+	// 1. Статика
 	fileServer := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
-	// 2. Обработка HTML страниц из папки static/pages
-	// ВАЖНО: этот хендлер теперь более гибкий к путям
+	// 2. Страницы
 	mux.HandleFunc("/pages/", servePages)
 
-	// 3. Главная страница (Dashboard)
+	// 3. Root (Dashboard)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Жесткая проверка: только чистый корень отдаст Dashboard
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
@@ -63,50 +59,40 @@ func main() {
 		http.ServeFile(w, r, "./static/index.html")
 	})
 
-	// 4. API Эндпоинты
+	// 4. API
 	mux.HandleFunc("/movies", getMovieHandler)
 	mux.HandleFunc("/login", api.LoginHandler)
 	mux.HandleFunc("/register", api.RegisterHandler)
+
+	// Обработчик сессий (GET - все/фильтр, POST - админ)
 	mux.HandleFunc("/sessions", sessionsHandler)
 
-	// Эндпоинты с защитой Auth (JWT)
+	// Защищенные маршруты
 	mux.Handle("/book", service.AuthMiddleware(http.HandlerFunc(createBookingHandler)))
 	mux.Handle("/reserve", service.AuthMiddleware(http.HandlerFunc(reserveSeatHandler)))
-
-	// Эндпоинты только для ADMIN
 	mux.Handle("/orders", service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(listOrdersHandler))))
+
+	// Удаление сессии (Admin)
 	mux.Handle("/sessions/", service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(deleteSessionHandler))))
 
 	fmt.Printf("🎬 CinemaGo Server running at http://localhost:%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
 }
 
-// servePages корректно отдает файлы из static/pages
 func servePages(w http.ResponseWriter, r *http.Request) {
-	// Убираем префикс /pages/
 	path := strings.TrimPrefix(r.URL.Path, "/pages/")
-
-	// Если зашли просто на /pages/ или путь пустой
 	if path == "" || path == "/" {
 		path = "index.html"
 	}
-
-	// Если запрошен файл без расширения .html и это не папка
 	if !strings.HasSuffix(path, ".html") && !strings.Contains(path, ".") {
 		path += ".html"
 	}
-
-	// Итоговый путь к файлу в системе: ./static/pages/ + то, что осталось от URL
 	filePath := filepath.Join("./static", "pages", path)
-
-	// Проверка на существование файла
 	info, err := os.Stat(filePath)
 	if os.IsNotExist(err) || info.IsDir() {
-		log.Printf("❌ Файл страницы не найден: %s", filePath)
 		http.NotFound(w, r)
 		return
 	}
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	http.ServeFile(w, r, filePath)
 }
@@ -122,7 +108,6 @@ func getMovieHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.URL.Query().Get("title")
 	var movie *models.Movie
 	var err error
-
 	if title != "" {
 		movie, err = api.SearchMovieByName(title)
 	} else {
@@ -131,7 +116,6 @@ func getMovieHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		movie, err = api.FetchMovieDetails(id)
 	}
-
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Movie not found"})
 		return
@@ -144,7 +128,6 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "POST only"})
 		return
 	}
-
 	var input struct {
 		Email     string `json:"email"`
 		SessionID int    `json:"session_id"`
@@ -152,29 +135,24 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		IsStudent bool   `json:"is_student"`
 		Age       int    `json:"age"`
 	}
-
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		return
 	}
-
 	session, ok, err := models.GetSessionByIDMongo(input.SessionID)
 	if err != nil || !ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Session not found"})
 		return
 	}
-
 	if input.Age < 18 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "18+ only"})
 		return
 	}
-
 	_, err = models.ReserveSeatMongo(input.SessionID, input.Seat)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-
 	finalPrice := service.CalculatePrice(session.BasePrice, input.IsStudent)
 	order := models.Order{
 		CustomerEmail: input.Email,
@@ -183,7 +161,6 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		PromoCode:     service.GeneratePromoCode(),
 		BonusesEarned: service.CalcBonuses(finalPrice),
 	}
-
 	saved, _ := models.SaveOrderMongo(order)
 	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle, saved.PromoCode)
 	writeJSON(w, http.StatusCreated, map[string]any{"status": "Success", "order": saved})
@@ -205,6 +182,7 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 		maxPriceStr := r.URL.Query().Get("max_price")
 		onlyStr := r.URL.Query().Get("only_with_seats")
 
+		// ИЗМЕНЕНИЕ: Если date == "all", мы позволяем получить всё
 		if date == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "date required"})
 			return
@@ -215,6 +193,7 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 			maxPrice, _ = strconv.ParseFloat(maxPriceStr, 64)
 		}
 
+		// ВАЖНО: Убедись, что FilterSessionsMongo внутри обрабатывает date == "all"
 		list, err := models.FilterSessionsMongo(cinema, date, maxPrice, onlyStr == "true")
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -225,7 +204,10 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		adminHandler := service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Обертка для проверки прав админа уже встроена внутри mux.Handle,
+		// но здесь мы обрабатываем POST внутри HandleFunc вручную.
+		// Лучше использовать Middleware снаружи, но для краткости:
+		service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var s models.Session
 			if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -237,9 +219,7 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			writeJSON(w, http.StatusCreated, created)
-		})))
-
-		adminHandler.ServeHTTP(w, r)
+		}))).ServeHTTP(w, r)
 		return
 	}
 }
@@ -249,6 +229,7 @@ func deleteSessionHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "DELETE only"})
 		return
 	}
+	// Исправлено получение ID
 	idStr := strings.TrimPrefix(r.URL.Path, "/sessions/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {

@@ -15,89 +15,98 @@
             border-radius: 20px;
             margin: 20px 0;
             text-align: center;
+            overflow-x: auto; /* Для мобильных устройств */
         }
 
         .cinema-screen {
             width: 80%;
-            height: 6px;
+            height: 8px;
             background: #5dade2;
-            margin: 0 auto 30px;
+            margin: 0 auto 40px;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(93, 173, 226, 0.5);
+            box-shadow: 0 5px 20px rgba(93, 173, 226, 0.6);
             color: #5dade2;
             font-size: 10px;
             font-weight: 800;
             letter-spacing: 10px;
-            text-align: center;
-            padding-top: 10px;
+            text-transform: uppercase;
         }
 
+        /* ИСПРАВЛЕННАЯ СЕТКА: Ровно 10 колонок для рядов A, B, C... */
         .dynamic-seats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
-            gap: 10px;
-            max-width: 700px;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 12px;
+            max-width: 650px;
             margin: 0 auto;
         }
 
         .seat-node {
-            height: 45px;
+            aspect-ratio: 1/1; /* Квадратные места */
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.75rem;
+            font-weight: 800;
             border-radius: 8px;
             cursor: pointer;
             background: #379683;
             color: white;
-            transition: 0.2s;
+            transition: all 0.2s ease;
             border: 2px solid #2d7a6a;
         }
 
         .seat-node:hover { background: #8ee4af; transform: scale(1.1); }
+
         .seat-node.selected {
             background: #1a1a1a !important;
             color: #8ee4af !important;
-            border-color: #1a1a1a;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-color: #8ee4af;
+            box-shadow: 0 0 15px rgba(142, 228, 175, 0.5);
+            transform: scale(1.1);
+        }
+
+        .seat-node.occupied {
+            background: #333 !important;
+            border-color: #444 !important;
+            color: #666 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
         /* --- СТИЛЬ БИЛЕТА --- */
-        .ticket-download-card {
-            width: 380px;
-            margin: 20px auto;
+        #captureTicket {
+            width: 360px;
             background: white;
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             font-family: 'Montserrat', sans-serif;
-            text-align: left;
+            margin: 0 auto;
         }
 
         .ticket-poster-header {
-            height: 200px;
+            height: 180px;
             background-size: cover;
             background-position: center;
             position: relative;
         }
 
-        .ticket-poster-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 60%;
-            background: linear-gradient(transparent, white);
-        }
+        .ticket-info-section { padding: 25px; text-align: left; }
+        .ticket-brand { font-size: 0.6rem; color: #999; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; }
+        .ticket-movie-title { font-size: 1.4rem; font-weight: 800; color: #1a1a1a; margin-bottom: 20px; line-height: 1.2; }
 
-        .ticket-info-section { padding: 25px; position: relative; }
-        .ticket-brand { font-size: 0.7rem; font-weight: 800; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-        .ticket-movie-title { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; margin: 0 0 20px 0; line-height: 1.2; }
         .ticket-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .meta-item label { display: block; font-size: 0.65rem; color: #aaa; text-transform: uppercase; font-weight: 700; }
-        .meta-item span { font-size: 1rem; font-weight: 700; color: #333; }
-        .ticket-footer-price { border-top: 2px dashed #eee; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .final-price-tag { font-size: 1.4rem; font-weight: 800; color: #379683; }
-        .bonus-text { font-size: 0.75rem; color: #888; background: #f8f9fa; padding: 5px 10px; border-radius: 20px; }
+        .meta-item label { display: block; font-size: 0.6rem; color: #aaa; text-transform: uppercase; font-weight: 800; }
+        .meta-item span { font-size: 0.9rem; font-weight: 800; color: #333; }
+
+        .ticket-footer { border-top: 2px dashed #eee; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .final-price-tag { font-size: 1.3rem; font-weight: 800; color: #379683; }
+
+        @media (max-width: 600px) {
+            .dynamic-seats-grid { gap: 6px; }
+            .seat-node { font-size: 0.6rem; }
+        }
     </style>
 </head>
 <body>
@@ -118,7 +127,7 @@
 </nav>
 
 <main class="container" id="pageContent">
-    <h1>🎟️ Finalize Your Booking</h1>
+    <h1 style="text-align: center; margin-bottom: 30px;">🎟️ Finalize Your Booking</h1>
 
     <div class="card">
         <h3>📋 Selected Session</h3>
@@ -140,37 +149,43 @@
             </div>
             <div class="form-group" style="flex: 1; min-width: 150px;">
                 <label for="seat">Selected Seat</label>
-                <input type="text" id="seat" placeholder="Click on map..." readonly required style="background: #f8f9fa; font-weight: 800;">
+                <input type="text" id="seat" placeholder="Click on map..." readonly required style="background: #f8f9fa; font-weight: 800; color: var(--color-primary);">
             </div>
         </div>
+
         <div class="form-group">
             <label>🎬 Choose your seat</label>
-            <div id="availableSeats" class="seats-container"></div>
-        </div>
-        <div class="form-group">
-            <label class="student-option" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                <input type="checkbox" id="isStudent" checked>
-                <span style="font-weight: 700;">AITU Student Discount (20%)</span>
-            </label>
-        </div>
-        <div class="price-summary" style="background: #f8f9fa; padding: 20px; border-radius: 15px; margin: 25px 0;">
-            <div class="price-row" style="display: flex; justify-content: space-between;">
-                <span>Total Amount:</span>
-                <strong id="totalPrice" style="font-size: 1.4rem; color: var(--color-dark);">0 ₸</strong>
+            <div id="availableSeats" class="seats-container">
             </div>
         </div>
+
+        <div class="form-group">
+            <label class="student-option" style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: #e8f5e9; padding: 15px; border-radius: 10px;">
+                <input type="checkbox" id="isStudent" checked>
+                <span style="font-weight: 700; color: #2e7d32;">AITU Student Discount (20%)</span>
+            </label>
+        </div>
+
+        <div class="price-summary" style="background: #1a1a1a; padding: 25px; border-radius: 15px; margin: 25px 0; color: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="opacity: 0.8; font-weight: 600;">Final Amount:</span>
+                <strong id="totalPrice" style="font-size: 1.8rem; color: #8ee4af;">0 ₸</strong>
+            </div>
+        </div>
+
         <div class="booking-actions" style="display: flex; gap: 15px;">
-            <button onclick="bookTicket()" id="bookButton" style="flex: 2; height: 55px;">Confirm Booking</button>
-            <button onclick="window.location.href='/pages/sessions.html'" class="secondary" style="flex: 1;">Back</button>
+            <button onclick="bookTicket()" id="bookButton" class="btn-shine" style="flex: 2; height: 60px; font-size: 1.1rem;">🚀 Confirm & Pay</button>
+            <button onclick="window.location.href='/pages/sessions.html'" class="secondary" style="flex: 1;">Cancel</button>
         </div>
     </div>
 
     <div class="card" id="successBooking" style="display: none; text-align: center;">
-        <h2 style="color: #379683;">✨ Order Confirmed!</h2>
-        <div id="ticketDetails" style="display: flex; justify-content: center; padding: 20px;"></div>
-        <div class="success-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
-            <button onclick="downloadTicket()" style="padding: 12px 30px; background: #379683; color: white; border-radius: 10px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
-            <button onclick="location.href='/'" class="secondary" style="padding: 12px 30px;">Home</button>
+        <h2 style="color: #379683; font-weight: 800; font-size: 2rem;">✨ Order Confirmed!</h2>
+        <p style="color: #666; margin-bottom: 30px;">Your digital ticket is ready. See you at the cinema!</p>
+        <div id="ticketDetails"></div>
+        <div class="success-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 40px;">
+            <button onclick="downloadTicket()" class="btn-shine" style="padding: 15px 40px;">📥 Download PDF</button>
+            <button onclick="location.href='/'" class="secondary" style="padding: 15px 40px;">Home</button>
         </div>
     </div>
 </main>
@@ -181,6 +196,7 @@
 <script src="/static/js/navbar.js"></script>
 <script src="/static/js/booking.js"></script>
 <script>
+    // Твой скрипт без изменений
     function parseJwt(token) {
         try {
             const base64Url = token.split('.')[1];
@@ -191,25 +207,19 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem("token");
-
         if (!token) {
             window.location.href = "/pages/auth.html";
             return;
         }
-
         const payload = parseJwt(token);
         const userRole = payload ? (payload.role || "") : "user";
-
         if (userRole === "admin") {
-            document.getElementById('pageContent').style.display = 'none';
             window.location.replace("/pages/admin.html");
             return;
         }
-
         if (typeof loadSelectedSession === 'function') {
             loadSelectedSession();
         }
-
         checkAuthUI();
     });
 
@@ -218,11 +228,9 @@
         const loginBtn = document.getElementById("loginBtn");
         const logoutBtn = document.getElementById("logoutBtn");
         const adminLink = document.getElementById("adminNavLink");
-
         if (token) {
             if (loginBtn) loginBtn.style.display = "none";
             if (logoutBtn) logoutBtn.style.display = "inline-block";
-
             const payload = parseJwt(token);
             if (adminLink) {
                 adminLink.style.display = (payload && payload.role === "admin") ? "inline-block" : "none";

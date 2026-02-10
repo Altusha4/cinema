@@ -46,28 +46,37 @@ async function loadStatistics() {
         const ordersRes = await authFetch('/orders');
         const orders = ordersRes.ok ? await ordersRes.json() : [];
 
+        // Считаем выручку
         const totalRevenue = orders.reduce((sum, order) => sum + (order.final_price || 0), 0);
 
-        document.getElementById('totalOrders').textContent = orders.length;
-        document.getElementById('revenue').textContent = totalRevenue.toLocaleString() + " ₸";
+        const totalOrdersEl = document.getElementById('totalOrders');
+        const revenueEl = document.getElementById('revenue');
 
-        const today = new Date().toISOString().slice(0, 10);
-        // GET сессий обычно публичный, но используем authFetch для консистентности
-        const sessionsRes = await fetch(`/sessions?date=${today}`);
+        if(totalOrdersEl) totalOrdersEl.textContent = orders.length;
+        if(revenueEl) revenueEl.textContent = totalRevenue.toLocaleString() + " ₸";
+
+        // Получаем все сессии для счетчика
+        const sessionsRes = await fetch(`/sessions?date=all`);
         const sessions = sessionsRes.ok ? await sessionsRes.json() : [];
 
-        document.getElementById('totalSessions').textContent = sessions.length;
-        document.getElementById('totalMovies').textContent = "TMDB";
+        const totalSessionsEl = document.getElementById('totalSessions');
+        if(totalSessionsEl) totalSessionsEl.textContent = sessions.length;
+
+        // Имитируем количество фильмов на основе уникальных названий в сессиях
+        const uniqueMovies = [...new Set(sessions.map(s => s.movie_title))];
+        const totalMoviesEl = document.getElementById('totalMovies');
+        if(totalMoviesEl) totalMoviesEl.textContent = uniqueMovies.length;
+
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
 }
 
-// 5. Управление сессиями (Рендер в таблицу)
+// 5. Управление сессиями
 async function loadSessionsForAdmin() {
     try {
-        const today = new Date().toISOString().slice(0, 10);
-        const res = await fetch(`/sessions?date=${today}`);
+        // Запрашиваем "all", чтобы видеть созданные сессии на любую дату
+        const res = await fetch(`/sessions?date=all`);
         const sessions = await res.json();
         renderAdminSessions(sessions);
     } catch (error) {
@@ -80,18 +89,21 @@ function renderAdminSessions(sessions) {
     if (!container) return;
 
     if (!sessions || sessions.length === 0) {
-        container.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No sessions found</td></tr>';
+        container.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No sessions found.</td></tr>';
         return;
     }
 
-    container.innerHTML = sessions.map(session => {
-        // Обработка даты из MongoDB {$date: ...} или обычной строки
+    // Сортировка: новые/будущие сверху
+    const sortedSessions = sessions.sort((a, b) => {
+        const dateA = new Date(a.start_time?.$date || a.start_time);
+        const dateB = new Date(b.start_time?.$date || b.start_time);
+        return dateB - dateA;
+    });
+
+    container.innerHTML = sortedSessions.map(session => {
         const dateVal = session.start_time?.$date || session.start_time;
         const formattedDate = new Date(dateVal).toLocaleString('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit',
-            day: '2-digit',
-            month: 'short'
+            hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric'
         });
 
         return `
@@ -108,13 +120,14 @@ function renderAdminSessions(sessions) {
     }).join('');
 }
 
-// 6. Управление заказами (Рендер в таблицу)
+// 6. Управление заказами
 async function loadOrdersForAdmin() {
     try {
         const res = await authFetch('/orders');
-        if (!res.ok) throw new Error("Unauthorized");
-        const orders = await res.json();
-        renderAdminOrders(orders);
+        if (res.ok) {
+            const orders = await res.json();
+            renderAdminOrders(orders);
+        }
     } catch (error) {
         console.error('Error loading orders:', error);
     }
@@ -129,8 +142,7 @@ function renderAdminOrders(orders) {
         return;
     }
 
-    const recentOrders = orders.slice(-15).reverse();
-    container.innerHTML = recentOrders.map(order => `
+    container.innerHTML = orders.slice(-15).reverse().map(order => `
         <tr>
             <td><span class="badge">${order.customer_email || 'n/a'}</span></td>
             <td><strong>${order.movie_title}</strong></td>
@@ -141,7 +153,7 @@ function renderAdminOrders(orders) {
     `).join('');
 }
 
-// 7. Создание новой сессии
+// 7. Создание новой сессии (С ЛОГИКОЙ РЯДОВ)
 async function createSession() {
     const movieTitle = document.getElementById('movieTitle').value.trim();
     const cinemaName = document.getElementById('cinemaName').value;
@@ -149,31 +161,55 @@ async function createSession() {
     const startTime = document.getElementById('startTime').value;
     const basePrice = parseFloat(document.getElementById('basePrice').value);
 
-    if (!movieTitle || !cinemaName || !startTime || !basePrice) {
+    // ПРОВЕРКА: Получаем количество мест из нового инпута
+    const seatCountInput = document.getElementById('seatCount');
+    if (!seatCountInput) {
+        alert("System error: 'seatCount' input not found in HTML!");
+        return;
+    }
+
+    const seatCount = parseInt(seatCountInput.value) || 30;
+    const generatedSeats = [];
+    const rows = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+    // ГЕНЕРАЦИЯ: Ряды по 10 мест
+    // Если seatCount = 45, создаст A1-A10, B1-B10, C1-C10, D1-D10, E1-E5
+    for (let i = 0; i < seatCount; i++) {
+        const rowIdx = Math.floor(i / 10);
+        const seatNum = (i % 10) + 1;
+        generatedSeats.push(`${rows[rowIdx]}${seatNum}`);
+    }
+
+    if (!movieTitle || !startTime || !basePrice) {
         alert('Please fill all required fields');
         return;
     }
 
+    const payload = {
+        movie_title: movieTitle,
+        cinema_name: cinemaName,
+        hall: hall || "hall 1",
+        start_time: new Date(startTime).toISOString(),
+        base_price: basePrice,
+        available_seats: generatedSeats, // Здесь теперь точно нужный массив
+        movie_id: 0
+    };
+
+    console.log("📤 Отправка в MongoDB:", payload);
+
     try {
         const response = await authFetch('/sessions', {
             method: 'POST',
-            body: JSON.stringify({
-                movie_title: movieTitle,
-                cinema_name: cinemaName,
-                hall: hall || "hall 1",
-                start_time: new Date(startTime).toISOString(),
-                base_price: basePrice,
-                available_seats: ["A1","A2","A3","B1","B2","B3","C1","C2","C3"],
-                movie_id: 0
-            })
+            body: JSON.stringify(payload)
         });
 
         if (response.ok) {
-            alert('✨ Session created!');
+            alert(`✨ Success! Session created with ${generatedSeats.length} seats.`);
             loadAdminData();
-            // Очистка полей
+            // Сброс формы
             document.getElementById('movieTitle').value = '';
             document.getElementById('startTime').value = '';
+            document.getElementById('hall').value = '';
         } else {
             const data = await response.json();
             throw new Error(data.error || 'Failed to create session');
@@ -188,10 +224,12 @@ async function deleteSession(sessionId) {
     if (!confirm(`Delete session #${sessionId}?`)) return;
     try {
         const res = await authFetch(`/sessions/${sessionId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Failed to delete');
-        loadAdminData();
+        if (res.ok) {
+            alert("Session deleted.");
+            loadAdminData();
+        }
     } catch (error) {
-        alert(error.message);
+        console.error(error);
     }
 }
 

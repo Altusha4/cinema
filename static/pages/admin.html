@@ -17,7 +17,7 @@
 
         @media (min-width: 1200px) {
             .admin-container {
-                grid-template-columns: 380px 1fr; /* Левая колонка для форм, правая для больших данных */
+                grid-template-columns: 380px 1fr;
                 align-items: start;
             }
             .full-width { grid-column: 1 / -1; }
@@ -43,21 +43,14 @@
         .stat-number { font-size: 1.8rem; font-weight: 800; color: var(--color-dark); display: block; }
         .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-muted); font-weight: 700; }
 
-        /* Стили таблиц: делаем их компактными и читаемыми */
-        .table-card {
-            overflow: hidden; /* Чтобы скругления работали */
-        }
-
-        .table-wrapper {
-            overflow-x: auto; /* Горизонтальный скролл только для таблицы, если не влезет */
-            width: 100%;
-        }
+        .table-card { overflow: hidden; }
+        .table-wrapper { overflow-x: auto; width: 100%; }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
-            min-width: 600px; /* Чтобы колонки не сжимались в кашу */
+            min-width: 600px;
         }
 
         th {
@@ -80,7 +73,6 @@
         tr:last-child td { border-bottom: none; }
         tr:hover { background: #fdfdfd; }
 
-        /* Бейджи для таблиц */
         .badge {
             padding: 4px 8px;
             border-radius: 6px;
@@ -89,7 +81,6 @@
             background: var(--color-secondary);
         }
 
-        /* Форма создания сессии */
         .admin-form .form-group { margin-bottom: 15px; }
         .admin-form input, .admin-form select {
             width: 100%;
@@ -112,6 +103,12 @@
         }
         .btn-delete:hover { background: #ff7675; color: white; }
 
+        .hint-text {
+            font-size: 0.7rem;
+            color: var(--color-muted);
+            margin-top: 4px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -151,10 +148,12 @@
 
         <aside class="card admin-form">
             <h3 style="margin-bottom: 20px;">🎭 Add New Session</h3>
+
             <div class="form-group">
                 <label>Movie Name</label>
                 <input type="text" id="movieTitle" placeholder="e.g. Interstellar">
             </div>
+
             <div class="form-group">
                 <label>Cinema</label>
                 <select id="cinemaName">
@@ -165,6 +164,7 @@
                     <option>Kinopark 8 IMAX Saryarqa</option>
                 </select>
             </div>
+
             <div style="display: flex; gap: 10px;">
                 <div class="form-group" style="flex: 1;">
                     <label>Hall</label>
@@ -175,10 +175,18 @@
                     <input type="number" id="basePrice" value="2000">
                 </div>
             </div>
+
             <div class="form-group">
                 <label>Date & Time</label>
                 <input type="datetime-local" id="startTime">
             </div>
+
+            <div class="form-group">
+                <label>Number of Seats</label>
+                <input type="number" id="seatCount" value="30" min="1" max="200">
+                <span class="hint-text">Automatic rows (10 seats per row: A, B, C...)</span>
+            </div>
+
             <button onclick="createSession()" class="btn-shine" style="width: 100%; height: 50px; margin-top: 10px;">➕ Create Session</button>
         </aside>
 
@@ -237,7 +245,6 @@
 <script src="/static/js/admin.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Простая проверка прав
         const token = localStorage.getItem("token");
         if (token) {
             try {

@@ -603,3 +603,47 @@ body.admin-mode .nav-links a:not(.admin-link) {
 .admin-navbar {
     justify-content: space-between;
 }
+.seating-plan {
+    display: grid;
+    /* Создаем ровно 10 колонок по 10% ширины */
+    grid-template-columns: repeat(10, 1fr);
+    gap: 12px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 20px;
+    border: 2px solid var(--color-primary);
+    max-width: 700px;
+    margin: 20px auto;
+}
+
+.seat {
+    aspect-ratio: 1 / 1; /* Делаем кресла квадратными */
+    background: white;
+    border: 2px solid var(--color-primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.seat:hover:not(.occupied) {
+    background: var(--color-secondary);
+    transform: scale(1.1);
+}
+
+.seat.selected {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 0 10px var(--color-primary);
+}
+
+.seat.occupied {
+    background: #e0e0e0;
+    border-color: #ccc;
+    color: #999;
+    cursor: not-allowed;
+}

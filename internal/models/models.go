@@ -13,12 +13,16 @@ type Movie struct {
 }
 
 type Session struct {
-	ID             int      `json:"id" bson:"id"`
-	MovieID        int      `json:"movie_id" bson:"movie_id"`
-	MovieTitle     string   `json:"movie_title" bson:"movie_title"`
-	BasePrice      float64  `json:"base_price" bson:"base_price"`
+	ID         int     `json:"id" bson:"id"`
+	MovieID    int     `json:"movie_id" bson:"movie_id"`
+	MovieTitle string  `json:"movie_title" bson:"movie_title"`
+	BasePrice  float64 `json:"base_price" bson:"base_price"`
+
+	// Это должен быть динамический слайс, он примет и 9, и 45, и 100 мест
 	AvailableSeats []string `json:"available_seats" bson:"available_seats"`
-	TotalSeats     []string `json:"total_seats" bson:"total_seats"`
+
+	// Исправляем тип на int. Это просто число для статистики.
+	TotalSeats int `json:"total_seats" bson:"total_seats"`
 
 	CinemaName string    `json:"cinema_name" bson:"cinema_name"`
 	Hall       string    `json:"hall,omitempty" bson:"hall,omitempty"`
