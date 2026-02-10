@@ -1,3 +1,4 @@
+// 1. Проверка доступа (Admin Only)
 (function checkAdminAccess() {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -14,6 +15,7 @@
     }
 })();
 
+// 2. Универсальный fetch с авторизацией
 async function authFetch(url, options = {}) {
     const token = localStorage.getItem("token");
     const headers = {
@@ -26,9 +28,11 @@ async function authFetch(url, options = {}) {
     return fetch(url, { ...options, headers });
 }
 
+// 3. Инициализация данных
 document.addEventListener('DOMContentLoaded', loadAdminData);
 
 async function loadAdminData() {
+    console.log("🔄 Синхронизация с MongoDB...");
     await Promise.all([
         loadStatistics(),
         loadSessionsForAdmin(),
@@ -36,30 +40,34 @@ async function loadAdminData() {
     ]);
 }
 
+// 4. Загрузка статистики
 async function loadStatistics() {
     try {
         const ordersRes = await authFetch('/orders');
         const orders = ordersRes.ok ? await ordersRes.json() : [];
 
-        const totalRevenue = orders.reduce((sum, order) => sum + order.final_price, 0);
+        const totalRevenue = orders.reduce((sum, order) => sum + (order.final_price || 0), 0);
 
         document.getElementById('totalOrders').textContent = orders.length;
-        document.getElementById('revenue').textContent = typeof formatPrice === 'function' ? formatPrice(totalRevenue) : totalRevenue + " ₸";
+        document.getElementById('revenue').textContent = totalRevenue.toLocaleString() + " ₸";
 
         const today = new Date().toISOString().slice(0, 10);
-        const sessionsRes = await authFetch(`/sessions?date=${today}`);
+        // GET сессий обычно публичный, но используем authFetch для консистентности
+        const sessionsRes = await fetch(`/sessions?date=${today}`);
         const sessions = sessionsRes.ok ? await sessionsRes.json() : [];
 
         document.getElementById('totalSessions').textContent = sessions.length;
+        document.getElementById('totalMovies').textContent = "TMDB";
     } catch (error) {
         console.error('Error loading statistics:', error);
     }
 }
 
+// 5. Управление сессиями (Рендер в таблицу)
 async function loadSessionsForAdmin() {
     try {
         const today = new Date().toISOString().slice(0, 10);
-        const res = await authFetch(`/sessions?date=${today}`);
+        const res = await fetch(`/sessions?date=${today}`);
         const sessions = await res.json();
         renderAdminSessions(sessions);
     } catch (error) {
@@ -68,40 +76,43 @@ async function loadSessionsForAdmin() {
 }
 
 function renderAdminSessions(sessions) {
-    const container = document.getElementById('sessionsManagement');
+    const container = document.getElementById('sessionsManagementBody');
+    if (!container) return;
+
     if (!sessions || sessions.length === 0) {
-        container.innerHTML = '<p class="empty">No sessions found for today</p>';
+        container.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No sessions found</td></tr>';
         return;
     }
-    container.innerHTML = `
-        <div class="sessions-table">
-            <div class="table-header">
-                <span>Movie</span>
-                <span>Cinema</span>
-                <span>Time</span>
-                <span>Price</span>
-                <span>Seats</span>
-                <span>Actions</span>
-            </div>
-            ${sessions.map(session => `
-                <div class="table-row" data-id="${session.id}">
-                    <span class="movie-title">${session.movie_title}</span>
-                    <span>${session.cinema_name}</span>
-                    <span>${typeof formatDateTime === 'function' ? formatDateTime(session.start_time).slice(0, -6) : session.start_time}</span>
-                    <span class="price">${typeof formatPrice === 'function' ? formatPrice(session.base_price) : session.base_price}</span>
-                    <span class="seats-count">${session.available_seats?.length || 0} seats</span>
-                    <span class="actions">
-                        <button onclick="deleteSession(${session.id})" class="danger">Delete</button>
-                    </span>
-                </div>
-            `).join('')}
-        </div>
-    `;
+
+    container.innerHTML = sessions.map(session => {
+        // Обработка даты из MongoDB {$date: ...} или обычной строки
+        const dateVal = session.start_time?.$date || session.start_time;
+        const formattedDate = new Date(dateVal).toLocaleString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: 'short'
+        });
+
+        return `
+            <tr>
+                <td><strong>${session.movie_title}</strong></td>
+                <td>${session.cinema_name} <br> <small class="badge">${session.hall || 'Standard'}</small></td>
+                <td>${formattedDate}</td>
+                <td><span class="price">${(session.base_price || 0).toLocaleString()} ₸</span></td>
+                <td>
+                    <button onclick="deleteSession(${session.id})" class="btn-delete">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
+// 6. Управление заказами (Рендер в таблицу)
 async function loadOrdersForAdmin() {
     try {
         const res = await authFetch('/orders');
+        if (!res.ok) throw new Error("Unauthorized");
         const orders = await res.json();
         renderAdminOrders(orders);
     } catch (error) {
@@ -110,49 +121,33 @@ async function loadOrdersForAdmin() {
 }
 
 function renderAdminOrders(orders) {
-    const container = document.getElementById('adminOrders');
+    const container = document.getElementById('adminOrdersBody');
+    if (!container) return;
+
     if (!orders || orders.length === 0) {
-        container.innerHTML = '<p class="empty">No orders yet</p>';
+        container.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No bookings yet</td></tr>';
         return;
     }
-    const recentOrders = orders.slice(-10).reverse();
-    container.innerHTML = `
-        <div class="orders-table">
-            <div class="table-header">
-                <span>ID</span>
-                <span>Movie</span>
-                <span>Customer</span>
-                <span>Price</span>
-                <span>Time</span>
-            </div>
-            ${recentOrders.map(order => `
-                <div class="table-row">
-                    <span class="order-id">#${order.id}</span>
-                    <span class="movie-title">${order.movie_title}</span>
-                    <span class="customer">${order.customer_email}</span>
-                    <span class="price">${typeof formatPrice === 'function' ? formatPrice(order.final_price) : order.final_price}</span>
-                    <span class="time">Recent</span>
-                </div>
-            `).join('')}
-        </div>
-    `;
+
+    const recentOrders = orders.slice(-15).reverse();
+    container.innerHTML = recentOrders.map(order => `
+        <tr>
+            <td><span class="badge">${order.customer_email || 'n/a'}</span></td>
+            <td><strong>${order.movie_title}</strong></td>
+            <td><span class="price">${(order.final_price || 0).toLocaleString()} ₸</span></td>
+            <td><code>${order.promo_code || '---'}</code></td>
+            <td><span style="color: #27ae60; font-weight: bold;">+${order.bonuses_earned || 0}</span></td>
+        </tr>
+    `).join('');
 }
 
-function toggleSessionForm() {
-    const form = document.getElementById('sessionForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
+// 7. Создание новой сессии
 async function createSession() {
     const movieTitle = document.getElementById('movieTitle').value.trim();
     const cinemaName = document.getElementById('cinemaName').value;
     const hall = document.getElementById('hall').value.trim();
     const startTime = document.getElementById('startTime').value;
     const basePrice = parseFloat(document.getElementById('basePrice').value);
-    const availableSeats = document.getElementById('availableSeats').value
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
 
     if (!movieTitle || !cinemaName || !startTime || !basePrice) {
         alert('Please fill all required fields');
@@ -165,21 +160,22 @@ async function createSession() {
             body: JSON.stringify({
                 movie_title: movieTitle,
                 cinema_name: cinemaName,
-                hall: hall || undefined,
+                hall: hall || "hall 1",
                 start_time: new Date(startTime).toISOString(),
                 base_price: basePrice,
-                available_seats: availableSeats,
+                available_seats: ["A1","A2","A3","B1","B2","B3","C1","C2","C3"],
                 movie_id: 0
             })
         });
-        const data = await response.json();
+
         if (response.ok) {
-            alert('Session created!');
-            toggleSessionForm();
-            clearSessionForm();
-            loadSessionsForAdmin();
-            loadStatistics();
+            alert('✨ Session created!');
+            loadAdminData();
+            // Очистка полей
+            document.getElementById('movieTitle').value = '';
+            document.getElementById('startTime').value = '';
         } else {
+            const data = await response.json();
             throw new Error(data.error || 'Failed to create session');
         }
     } catch (error) {
@@ -187,60 +183,19 @@ async function createSession() {
     }
 }
 
-function clearSessionForm() {
-    document.getElementById('movieTitle').value = '';
-    document.getElementById('cinemaName').value = '';
-    document.getElementById('hall').value = '';
-    document.getElementById('startTime').value = '';
-    document.getElementById('basePrice').value = '';
-    document.getElementById('availableSeats').value = 'A1,A2,A3,B1,B2,B3,C1,C2,C3';
-}
-
+// 8. Удаление сессии
 async function deleteSession(sessionId) {
     if (!confirm(`Delete session #${sessionId}?`)) return;
     try {
         const res = await authFetch(`/sessions/${sessionId}`, { method: 'DELETE' });
-        if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || 'Failed to delete');
-        }
-        alert('Deleted');
-        loadSessionsForAdmin();
-        loadStatistics();
+        if (!res.ok) throw new Error('Failed to delete');
+        loadAdminData();
     } catch (error) {
         alert(error.message);
     }
 }
 
-const adminStyle = document.createElement('style');
-adminStyle.textContent = `
-    .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 40px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-top: 15px; }
-    .stat-card { background: var(--color-secondary); padding: 20px; border-radius: 12px; text-align: center; border: 2px solid transparent; transition: all 0.3s ease; }
-    .stat-card:hover { border-color: var(--color-primary); transform: translateY(-5px); }
-    .stat-number { display: block; font-size: 2rem; font-weight: 800; color: var(--color-dark); margin-bottom: 5px; }
-    .stat-label { font-size: 0.9rem; color: var(--color-muted); }
-    .sessions-management, .orders-table { margin-top: 20px; }
-    .sessions-table, .orders-table { display: flex; flex-direction: column; gap: 10px; }
-    .table-header { display: grid; grid-template-columns: 2fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr; gap: 15px; padding: 15px; background: var(--color-secondary); border-radius: 10px; font-weight: 600; color: var(--color-muted); }
-    .orders-table .table-header { grid-template-columns: 0.5fr 2fr 1.5fr 0.8fr 1fr; }
-    .table-row { display: grid; grid-template-columns: 2fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr; gap: 15px; padding: 15px; align-items: center; background: white; border-radius: 10px; border: 2px solid var(--color-secondary); transition: all 0.2s ease; }
-    .orders-table .table-row { grid-template-columns: 0.5fr 2fr 1.5fr 0.8fr 1fr; }
-    .table-row:hover { border-color: var(--color-primary); transform: translateX(5px); }
-    .movie-title { font-weight: 600; color: var(--color-dark); }
-    .price { font-weight: 700; color: var(--color-dark); }
-    .seats-count { background: rgba(142, 228, 175, 0.2); padding: 5px 10px; border-radius: 20px; font-weight: 600; text-align: center; color: var(--color-muted); }
-    .actions { display: flex; gap: 8px; }
-    .actions button { padding: 8px 12px; font-size: 0.85rem; width: auto; }
-    button.danger { background-color: #c0392b; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    button.danger:hover { background-color: #a93226; }
-    .order-id { font-family: monospace; background: var(--color-secondary); padding: 4px 8px; border-radius: 6px; font-weight: 600; }
-    .customer { font-size: 0.9rem; color: var(--color-muted); }
-    .time { font-size: 0.85rem; color: var(--color-muted); }
-    .empty { text-align: center; padding: 40px; color: var(--color-muted); font-style: italic; }
-    @media (max-width: 768px) {
-        .table-header { display: none; }
-        .table-row { grid-template-columns: 1fr; gap: 5px; }
-    }
-`;
-document.head.appendChild(adminStyle);
+window.logout = function() {
+    localStorage.clear();
+    window.location.href = "/pages/auth.html";
+};
