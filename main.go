@@ -6,6 +6,7 @@ import (
 	"cinema/internal/service"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -43,14 +44,10 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// 1. Статика
 	fileServer := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
-	// 2. Страницы
 	mux.HandleFunc("/pages/", servePages)
-
-	// 3. Root (Dashboard)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -59,21 +56,22 @@ func main() {
 		http.ServeFile(w, r, "./static/index.html")
 	})
 
-	// 4. API
 	mux.HandleFunc("/movies", getMovieHandler)
 	mux.HandleFunc("/login", api.LoginHandler)
 	mux.HandleFunc("/register", api.RegisterHandler)
 
-	// Обработчик сессий (GET - все/фильтр, POST - админ)
 	mux.HandleFunc("/sessions", sessionsHandler)
 
-	// Защищенные маршруты
 	mux.Handle("/book", service.AuthMiddleware(http.HandlerFunc(createBookingHandler)))
 	mux.Handle("/reserve", service.AuthMiddleware(http.HandlerFunc(reserveSeatHandler)))
 	mux.Handle("/orders", service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(listOrdersHandler))))
 
-	// Удаление сессии (Admin)
 	mux.Handle("/sessions/", service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(deleteSessionHandler))))
+
+	mux.HandleFunc("/pay/init", payInitHandler)
+	mux.HandleFunc("/pay/callback", payCallbackHandler)
+	mux.HandleFunc("/pay/failure", payFailureHandler)
+	mux.HandleFunc("/pay/status", payStatusHandler)
 
 	fmt.Printf("🎬 CinemaGo Server running at http://localhost:%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
@@ -182,7 +180,6 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 		maxPriceStr := r.URL.Query().Get("max_price")
 		onlyStr := r.URL.Query().Get("only_with_seats")
 
-		// ИЗМЕНЕНИЕ: Если date == "all", мы позволяем получить всё
 		if date == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "date required"})
 			return
@@ -193,7 +190,6 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 			maxPrice, _ = strconv.ParseFloat(maxPriceStr, 64)
 		}
 
-		// ВАЖНО: Убедись, что FilterSessionsMongo внутри обрабатывает date == "all"
 		list, err := models.FilterSessionsMongo(cinema, date, maxPrice, onlyStr == "true")
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -204,9 +200,7 @@ func sessionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		// Обертка для проверки прав админа уже встроена внутри mux.Handle,
-		// но здесь мы обрабатываем POST внутри HandleFunc вручную.
-		// Лучше использовать Middleware снаружи, но для краткости:
+
 		service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var s models.Session
 			if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
@@ -229,7 +223,6 @@ func deleteSessionHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "DELETE only"})
 		return
 	}
-	// Исправлено получение ID
 	idStr := strings.TrimPrefix(r.URL.Path, "/sessions/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -263,4 +256,143 @@ func reserveSeatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, updated)
+}
+
+func payInitHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "Use POST"})
+		return
+	}
+
+	// ожидаем order_id
+	var in struct {
+		OrderID int `json:"order_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.OrderID == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "order_id is required"})
+		return
+	}
+
+	// найди заказ (у тебя уже есть orders в Mongo)
+	order, ok, err := models.GetOrderByIDMongo(in.OrderID) // если у тебя нет — скажи, я под твои функции перепишу
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	if !ok {
+		writeJSON(w, 404, map[string]string{"error": "order not found"})
+		return
+	}
+
+	invoiceID := makeInvoiceID(in.OrderID)
+	secretHash, err := service.RandomSecretHash()
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+
+	auth, err := service.GetEpayToken(invoiceID, order.FinalPrice, "KZT", secretHash)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+
+	paymentObj, err := service.BuildWidgetPaymentObject(auth, invoiceID, order.FinalPrice, "KZT")
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+
+	_, _ = models.CreatePaymentMongo(models.Payment{
+		OrderID:    order.ID,
+		InvoiceID:  invoiceID,
+		Amount:     order.FinalPrice,
+		Currency:   "KZT",
+		TerminalID: paymentObj.Terminal,
+		SecretHash: secretHash,
+	})
+
+	writeJSON(w, 200, map[string]any{
+		"auth":        auth,
+		"payment_obj": paymentObj,
+	})
+}
+
+// epay отправляет JSON в postLink (пример есть в доке) :contentReference[oaicite:5]{index=5}
+func payCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	body, _ := io.ReadAll(r.Body)
+
+	var cb map[string]any
+	_ = json.Unmarshal(body, &cb)
+
+	invoiceID, _ := cb["invoiceId"].(string)
+	code, _ := cb["code"].(string)
+	epayID, _ := cb["id"].(string)
+
+	if invoiceID == "" {
+		writeJSON(w, 400, map[string]string{"error": "missing invoiceId"})
+		return
+	}
+
+	p, ok, err := models.GetPaymentByInvoiceMongo(invoiceID)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	if !ok {
+		writeJSON(w, 404, map[string]string{"error": "payment not found"})
+		return
+	}
+
+	if code == "ok" {
+		_ = models.MarkPaymentPaidMongo(invoiceID, epayID, cb)
+		_ = models.MarkOrderPaidMongo(p.OrderID) // если нет — скажи, добавлю под ваш Order
+	} else {
+		_ = models.MarkPaymentFailedMongo(invoiceID, cb)
+	}
+
+	// EPAY обычно ждёт просто 200 OK
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("OK"))
+}
+
+func payFailureHandler(w http.ResponseWriter, r *http.Request) {
+	// иногда failure приходит сюда; обработаем как failed
+	body, _ := io.ReadAll(r.Body)
+	var cb map[string]any
+	_ = json.Unmarshal(body, &cb)
+
+	invoiceID, _ := cb["invoiceId"].(string)
+	if invoiceID != "" {
+		_ = models.MarkPaymentFailedMongo(invoiceID, cb)
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("OK"))
+}
+
+func payStatusHandler(w http.ResponseWriter, r *http.Request) {
+	invoiceID := r.URL.Query().Get("invoice_id")
+	if invoiceID == "" {
+		writeJSON(w, 400, map[string]string{"error": "invoice_id is required"})
+		return
+	}
+	p, ok, err := models.GetPaymentByInvoiceMongo(invoiceID)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": err.Error()})
+		return
+	}
+	if !ok {
+		writeJSON(w, 404, map[string]string{"error": "not found"})
+		return
+	}
+	writeJSON(w, 200, p)
+}
+
+func makeInvoiceID(orderID int) string {
+	s := fmt.Sprintf("%06d", orderID)
+
+	if len(s) > 15 {
+		s = s[len(s)-15:]
+	}
+	return s
 }

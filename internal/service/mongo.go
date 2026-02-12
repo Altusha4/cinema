@@ -39,18 +39,33 @@ func ConnectMongo() error {
 	return nil
 }
 
+func mustDB() *mongo.Database {
+	if MongoDB == nil {
+		panic("MongoDB is nil. Did you forget to call ConnectMongo()?")
+	}
+	return MongoDB
+}
+
 func OrdersCollection() *mongo.Collection {
-	return MongoDB.Collection("orders")
+	return mustDB().Collection("orders")
 }
 
 func SessionsCollection() *mongo.Collection {
-	return MongoDB.Collection("sessions")
+	return mustDB().Collection("sessions")
 }
 
 func CountersCollection() *mongo.Collection {
-	return MongoDB.Collection("counters")
+	return mustDB().Collection("counters")
 }
 
 func MoviesCollection() *mongo.Collection {
-	return MongoDB.Collection("movies")
+	return mustDB().Collection("movies")
+}
+
+func PaymentsCollection() *mongo.Collection {
+	return mustDB().Collection("payments")
+}
+
+func UsersCollection() *mongo.Collection {
+	return mustDB().Collection("users")
 }
