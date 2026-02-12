@@ -64,6 +64,6 @@ func GetUserByEmail(email string) (User, bool, error) {
 	}
 
 	log.Printf("DEBUG: Found user %s with role [%s]", u.Email, u.Role)
-	
+
 	return u, true, nil
 }

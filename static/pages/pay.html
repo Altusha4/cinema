@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>CinemaGo | Pay</title>
+  <script src="https://test-epay.homebank.kz/payform/payform.min.js"></script>
+
+  <style>
+    body { font-family: system-ui, Arial; padding: 24px; }
+    .card { max-width: 720px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 16px; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    button { padding: 12px 16px; border-radius: 10px; border: 0; cursor:pointer; }
+    .primary { background:#111; color:#fff; }
+    .muted { color:#666; }
+    pre { background:#f6f6f6; padding:12px; border-radius:12px; overflow:auto; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>💳 Оплата заказа</h2>
+    <p class="muted" id="info">Готовим платёж...</p>
+
+    <div class="row" style="margin: 12px 0;">
+      <button class="primary" id="payBtn" disabled>Open payment form</button>
+      <button onclick="location.href='/pages/booking.html'">Back</button>
+    </div>
+
+    <details>
+      <summary>debug (payment_obj)</summary>
+      <pre id="dbg"></pre>
+    </details>
+  </div>
+
+  <script src="/static/js/pay.js"></script>
+</body>
+</html>

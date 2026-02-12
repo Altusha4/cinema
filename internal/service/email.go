@@ -22,7 +22,6 @@ func SendEmail(to, subject, body string) error {
 
 	addr := net.JoinHostPort(host, port)
 
-	// message
 	msg := strings.Join([]string{
 		"From: " + user,
 		"To: " + to,
@@ -34,7 +33,6 @@ func SendEmail(to, subject, body string) error {
 		"",
 	}, "\r\n")
 
-	// connect
 	dialer := net.Dialer{Timeout: 20 * time.Second}
 	conn, err := dialer.Dial("tcp", addr)
 	if err != nil {
@@ -47,7 +45,6 @@ func SendEmail(to, subject, body string) error {
 	}
 	defer c.Close()
 
-	// STARTTLS (как в Python starttls)
 	if ok, _ := c.Extension("STARTTLS"); ok {
 		if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
 			return fmt.Errorf("starttls: %w", err)
@@ -56,7 +53,6 @@ func SendEmail(to, subject, body string) error {
 		return fmt.Errorf("server does not support STARTTLS")
 	}
 
-	// AUTH PLAIN (для Gmail app password)
 	auth := smtp.PlainAuth("", user, pass, host)
 	if ok, _ := c.Extension("AUTH"); ok {
 		if err := c.Auth(auth); err != nil {
@@ -66,7 +62,6 @@ func SendEmail(to, subject, body string) error {
 		return fmt.Errorf("server does not support AUTH")
 	}
 
-	// send
 	if err := c.Mail(user); err != nil {
 		return fmt.Errorf("mail from: %w", err)
 	}
