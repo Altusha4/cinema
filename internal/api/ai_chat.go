@@ -1,4 +1,3 @@
-// internal/api/ai_chat.go
 package api
 
 import (
@@ -44,7 +43,6 @@ type AIChatResponse struct {
 	Reply string `json:"reply"`
 }
 
-// Minimal parsing for Responses API
 type openAIResponse struct {
 	Output []struct {
 		Content []struct {
@@ -54,8 +52,6 @@ type openAIResponse struct {
 	} `json:"output"`
 }
 
-// POST /ai/chat
-// Body: {"message":"..."}
 func AIChatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -79,14 +75,12 @@ func AIChatHandler(w http.ResponseWriter, r *http.Request) {
 		model = "gpt-4.1-mini"
 	}
 
-	// ✅ Build real context from your Mongo sessions
 	ctxText, err := buildCinemaGoContext()
 	if err != nil {
 		http.Error(w, "context error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Final prompt given to the model
 	finalPrompt := strings.TrimSpace(cinemaGoSystemPrompt) +
 		"\n\n" + ctxText +
 		"\n\nUSER QUESTION:\n" + strings.TrimSpace(req.Message)
@@ -141,7 +135,6 @@ func callOpenAIResponses(apiKey, model, userPrompt string) (string, error) {
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
-		// show response body to understand error quickly
 		return "", errors.New(string(body))
 	}
 
@@ -166,8 +159,6 @@ func callOpenAIResponses(apiKey, model, userPrompt string) (string, error) {
 	return s, nil
 }
 
-// Builds strict context from your DB sessions.
-// Requires: models.GetAllSessionsMongo() implemented.
 func buildCinemaGoContext() (string, error) {
 	sessions, err := models.GetAllSessionsMongo()
 	if err != nil {

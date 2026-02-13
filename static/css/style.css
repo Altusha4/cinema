@@ -12,7 +12,6 @@
     --max-content: 1400px;
 }
 
-/* Глобальные настройки */
 * {
     box-sizing: border-box;
 }
@@ -21,14 +20,12 @@ body {
     font-family: 'Montserrat', 'Inter', sans-serif;
     background-color: var(--bg);
     color: var(--text-main);
-    /* Изменено: убрали жесткий лимит 900px, добавили гибкость */
     max-width: var(--max-content);
     margin: 0 auto;
     padding: 40px 20px;
     line-height: 1.6;
 }
 
-/* Навигация */
 .navbar {
     background: var(--card-bg);
     border: 2px solid var(--color-primary);
@@ -78,7 +75,6 @@ body {
     color: var(--text-light);
 }
 
-/* Общие элементы */
 h1 {
     text-align: center;
     color: var(--color-dark);
@@ -97,7 +93,7 @@ h1 {
     margin-bottom: 24px;
     box-shadow: 10px 10px 0px var(--color-primary);
     transition: transform 0.2s ease;
-    height: 100%; /* Чтобы карточки в сетке были одной высоты */
+    height: 100%;
 }
 
 .card:hover {
@@ -120,7 +116,6 @@ h3 {
     margin-bottom: 10px;
 }
 
-/* --- НОВЫЕ СТИЛИ ДЛЯ СЕТКИ (Чтобы страница не была узкой) --- */
 .dashboard-grid, .admin-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
@@ -136,7 +131,6 @@ h3 {
     margin-top: 20px;
 }
 
-/* Формы */
 input, select {
     background: var(--color-secondary);
     border: 2px solid var(--color-primary);
@@ -192,7 +186,6 @@ button.secondary {
     color: var(--color-muted);
 }
 
-/* Фильмы */
 .movie-flex {
     display: flex;
     gap: 25px;
@@ -232,7 +225,6 @@ button.secondary {
     font-weight: 700;
 }
 
-/* Сеансы */
 .filters {
     display: flex;
     flex-wrap: wrap;
@@ -277,7 +269,6 @@ button.secondary {
     font-size: 1.1rem;
 }
 
-/* Бронирование */
 .student-option {
     display: flex;
     align-items: center;
@@ -296,7 +287,6 @@ button.secondary {
     accent-color: var(--color-dark);
 }
 
-/* Стили для Dashboard (Welcome Page) */
 .user-stats {
     display: flex;
     gap: 20px;
@@ -319,7 +309,6 @@ button.secondary {
     color: var(--color-dark);
 }
 
-/* Заказы */
 .table-container {
     overflow-x: auto;
     width: 100%;
@@ -347,7 +336,6 @@ td {
     border-bottom: 2px solid var(--color-secondary);
 }
 
-/* JSON отладка */
 pre {
     background: var(--color-muted);
     color: var(--color-secondary);
@@ -357,13 +345,11 @@ pre {
     overflow-x: auto;
 }
 
-/* Анимации */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Адаптивность */
 @media (max-width: 1024px) {
     .dashboard-grid, .admin-grid {
         grid-template-columns: 1fr;
@@ -397,11 +383,11 @@ pre {
     border-color: #bbb !important;
     color: #999 !important;
     cursor: not-allowed;
-    transform: none !important; /* Отключаем анимацию при наведении */
+    transform: none !important;
 }
 .suggestions-box {
     position: absolute;
-    top: 60px; /* Сразу под инпутом */
+    top: 60px;
     left: 0;
     right: 0;
     background: white;
@@ -411,7 +397,7 @@ pre {
     max-height: 300px;
     overflow-y: auto;
     box-shadow: 10px 10px 0px rgba(142, 228, 175, 0.3);
-    display: none; /* Скрыт по умолчанию */
+    display: none;
 }
 
 .suggestion-item {
@@ -450,32 +436,28 @@ pre {
     font-size: 0.75rem;
     color: var(--color-muted);
 }
-/* ===== AUTH PAGE ONLY ===== */
 body.auth-page {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #eef5df; /* тот же фон, что у тебя */
+  background: #eef5df;
 }
 
-/* основной контейнер */
 .auth-container {
   width: 100%;
   max-width: 420px;
   padding: 30px 28px;
   border-radius: 16px;
-  background: transparent; /* НЕ меняем тему */
+  background: transparent;
 }
 
-/* логотип */
 .auth-container h1,
 .auth-container .logo {
   text-align: center;
   margin-bottom: 20px;
 }
 
-/* табы LOGIN / REGISTER */
 .auth-tabs {
   display: flex;
   gap: 10px;
@@ -486,30 +468,25 @@ body.auth-page {
   flex: 1;
 }
 
-/* формы */
 .auth-container form {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-/* инпуты */
 .auth-container input {
   width: 100%;
 }
 
-/* кнопка входа */
 .auth-container .submit-btn {
   margin-top: 10px;
 }
 
-/* статус */
 #status {
   margin-top: 12px;
   text-align: center;
   font-size: 14px;
 }
-/* ===== AUTH PAGE LAYOUT ===== */
 body.auth-page {
   min-height: 100vh;
   display: flex;
@@ -518,14 +495,12 @@ body.auth-page {
   background: #eef5df;
 }
 
-/* ===== GLASS CARD ===== */
 .auth-container {
   width: 100%;
   max-width: 420px;
   padding: 32px 28px;
   border-radius: 20px;
 
-  /* glass effect */
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -537,13 +512,11 @@ body.auth-page {
   text-align: center;
 }
 
-/* ===== LOGO ===== */
 .auth-container h1,
 .auth-container .logo {
   margin-bottom: 20px;
 }
 
-/* ===== TABS ===== */
 .auth-tabs {
   display: flex;
   gap: 10px;
@@ -554,7 +527,6 @@ body.auth-page {
   flex: 1;
 }
 
-/* ===== FORMS ===== */
 #loginForm,
 #registerForm {
   display: flex;
@@ -562,18 +534,15 @@ body.auth-page {
   gap: 14px;
 }
 
-/* ===== INPUTS ===== */
 .auth-container input {
   width: 100%;
   text-align: left;
 }
 
-/* ===== BUTTON ===== */
 .auth-container button {
   align-self: center;
 }
 
-/* ===== STATUS TEXT ===== */
 #status {
   margin-top: 14px;
   font-size: 14px;
@@ -605,7 +574,6 @@ body.admin-mode .nav-links a:not(.admin-link) {
 }
 .seating-plan {
     display: grid;
-    /* Создаем ровно 10 колонок по 10% ширины */
     grid-template-columns: repeat(10, 1fr);
     gap: 12px;
     padding: 20px;
@@ -617,7 +585,7 @@ body.admin-mode .nav-links a:not(.admin-link) {
 }
 
 .seat {
-    aspect-ratio: 1 / 1; /* Делаем кресла квадратными */
+    aspect-ratio: 1 / 1;
     background: white;
     border: 2px solid var(--color-primary);
     border-radius: 8px;

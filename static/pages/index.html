@@ -295,7 +295,6 @@
         const userRole = payload ? (payload.role || "user") : "user";
         const currentPath = window.location.pathname;
 
-        // --- ЛОГИКА ИЗОЛЯЦИИ АДМИНА ---
         if (userRole === "admin") {
             const navLinks = document.getElementById('mainNavLinks');
             if (navLinks) {
@@ -304,7 +303,6 @@
                     <a href="/pages/index.html" class="nav-link active">Search</a>
                 `;
             }
-            // Скрываем кнопку перехода к сеансам (админу не нужно покупать билеты)
             const showtimesBtn = document.getElementById('viewShowtimesBtn');
             if (showtimesBtn) showtimesBtn.style.display = 'none';
         } else {

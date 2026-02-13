@@ -48,15 +48,11 @@ async function initPayment() {
 
   btn.onclick = () => {
     try {
-      // ВАЖНО: payform глобальный объект из payform.min.js
-      // Часто у них используется Payform/EpayWidget/payform — зависит от сборки.
-      // Самый частый кейс: payform.open(paymentObj)
       if (window.payform && typeof window.payform.open === "function") {
         window.payform.open(paymentObj);
         return;
       }
 
-      // fallback варианты (на всякий)
       if (window.Payform && typeof window.Payform.open === "function") {
         window.Payform.open(paymentObj);
         return;

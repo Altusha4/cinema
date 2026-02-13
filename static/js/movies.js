@@ -1,16 +1,3 @@
-/**
- * ============================================================
- * CinemaGo - Movies & Discovery Module
- * ============================================================
- * Разработано для Astana IT University.
- * Синхронизировано с моделями Go: ID, Title, Overview, PosterPath,
- * ReleaseDate, Adult, VoteAverage
- * ============================================================
- */
-
-/**
- * 1. ОСНОВНАЯ ФУНКЦИЯ ПОИСКА (searchMovie)
- */
 async function searchMovie() {
     console.log("Инициализация поиска фильма...");
 
@@ -36,7 +23,6 @@ async function searchMovie() {
             throw new Error(rawData.error || 'Movie not found');
         }
 
-        // Поддержка вложенности данных от Go-бэкенда
         const movieData = rawData.movie || rawData.data || rawData;
 
         displayMovie(movieData);
@@ -55,9 +41,6 @@ async function searchMovie() {
     }
 }
 
-/**
- * 2. ФУНКЦИЯ ОТОБРАЖЕНИЯ (displayMovie)
- */
 function displayMovie(data) {
     console.log("Отрисовка данных фильма...");
 
@@ -66,13 +49,11 @@ function displayMovie(data) {
         if (el) el.textContent = text;
     };
 
-    // Сопоставление с твоей Go-моделью
     safeSetText('movieTitle', data.title || 'Unknown Title');
     safeSetText('movieRelease', `Release Date: ${data.release_date || 'N/A'}`);
     safeSetText('movieOverview', data.overview || 'No description available.');
     safeSetText('movieId', `ID: ${data.id}`);
 
-    // Логика рейтинга (используем новое поле vote_average)
     const ratingEl = document.getElementById('movieRating');
     if (ratingEl) {
         const score = data.vote_average || 0;
@@ -80,14 +61,12 @@ function displayMovie(data) {
         ratingEl.innerHTML = `⭐ ${parseFloat(score).toFixed(1)}`;
     }
 
-    // Логика Adult (bool из модели)
     const adultEl = document.getElementById('movieAdult');
     if (adultEl) {
         adultEl.textContent = data.adult ? '18+' : 'All Ages';
         adultEl.style.backgroundColor = data.adult ? '#c0392b' : '#379683';
     }
 
-    // Постер
     const poster = document.getElementById('moviePoster');
     if (poster) {
         const posterPath = data.poster_path;
@@ -97,7 +76,6 @@ function displayMovie(data) {
             : 'https://via.placeholder.com/500x750?text=No+Poster';
     }
 
-    // Плавное появление контейнера
     const detailsBox = document.getElementById('movieDetails');
     if (detailsBox) {
         detailsBox.style.display = 'flex';
@@ -105,9 +83,6 @@ function displayMovie(data) {
     }
 }
 
-/**
- * 3. ЗАГРУЗКА ПОПУЛЯРНОГО (loadFeaturedMovies)
- */
 async function loadFeaturedMovies() {
     console.log("Загрузка карусели...");
     const container = document.getElementById('featuredMovies');
@@ -131,9 +106,6 @@ async function loadFeaturedMovies() {
     }
 }
 
-/**
- * 4. ОТРИСОВКА КАРТОЧКИ КАРУСЕЛИ (renderFeaturedCard)
- */
 function renderFeaturedCard(movie, container) {
     const card = document.createElement('div');
     card.className = 'featured-card';
@@ -162,9 +134,6 @@ function renderFeaturedCard(movie, container) {
     container.appendChild(card);
 }
 
-/**
- * 5. ПОИСК ПО КЛИКУ
- */
 function searchMovieById(id) {
     const queryInput = document.getElementById('movieQuery');
     if (queryInput) {
@@ -174,9 +143,6 @@ function searchMovieById(id) {
     }
 }
 
-/**
- * 6. ИНЪЕКЦИЯ СТИЛЕЙ
- */
 const styleInject = document.createElement('style');
 styleInject.textContent = `
     .featured-card {
@@ -220,7 +186,6 @@ styleInject.textContent = `
     }
 `;
 
-// Функция Debounce (задержка)
 function debounce(func, timeout = 400) {
     let timer;
     return (...args) => {
@@ -229,7 +194,6 @@ function debounce(func, timeout = 400) {
     };
 }
 
-// Поиск для подсказок
 async function liveSearch(query) {
     const box = document.getElementById('searchSuggestions');
     if (query.length < 2) {
@@ -240,11 +204,6 @@ async function liveSearch(query) {
     try {
         const res = await fetch(`/movies?title=${encodeURIComponent(query)}`);
         const movie = await res.json();
-
-        // TMDB при поиске по названию часто возвращает один лучший результат,
-        // но наше API настроено на FetchMovieDetails или SearchMovieByName.
-        // Если твой бэкенд возвращает список, пройдись циклом. Если один — выведи его:
-
         if (movie && movie.title) {
             box.innerHTML = `
                 <div class="suggestion-item" onclick="selectSuggestion('${movie.id}')">
@@ -262,15 +221,13 @@ async function liveSearch(query) {
     }
 }
 
-// Функция при клике на подсказку
 function selectSuggestion(id) {
     const input = document.getElementById('movieQuery');
     input.value = id;
     document.getElementById('searchSuggestions').style.display = 'none';
-    searchMovie(); // Запускаем основной поиск
+    searchMovie();
 }
 
-// Навешиваем обработчик на ввод
 document.addEventListener('DOMContentLoaded', () => {
     const queryInput = document.getElementById('movieQuery');
     if (queryInput) {
@@ -278,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
         queryInput.addEventListener('input', processInput);
     }
 
-    // Закрывать подсказки при клике вне поля
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.search-container')) {
             document.getElementById('searchSuggestions').style.display = 'none';

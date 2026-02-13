@@ -1,8 +1,3 @@
-/**
- * CinemaGo | Light Premium Booking Module
- * Keeps your logic: seat select -> /book -> /pay/init -> open Halyk widget
- */
-
 function authFetch(url, options = {}) {
   const token = localStorage.getItem("token");
 
@@ -30,9 +25,6 @@ function formatDateTime(dateTimeStr) {
   return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-/**
- * 1) INITIALIZATION
- */
 async function loadSelectedSession() {
   console.log("Initializing booking module...");
   const rawData = sessionStorage.getItem("selectedSession");
@@ -76,9 +68,6 @@ async function loadSelectedSession() {
   updatePriceCalculation();
 }
 
-/**
- * 2) SEAT RETRIEVAL AND RENDERING
- */
 async function fetchAndRenderSeats() {
   const container = document.getElementById("availableSeats");
   const seatInput = document.getElementById("seat");
@@ -134,7 +123,7 @@ async function fetchAndRenderSeats() {
 
           if (seatInput) {
             seatInput.value = visualName;
-            seatInput.dataset.originalId = originalId; // DB id for server
+            seatInput.dataset.originalId = originalId;
           }
         };
       }
@@ -143,7 +132,6 @@ async function fetchAndRenderSeats() {
 
     let rowTracker = 0;
 
-    // Incomplete top row (VIP)
     if (remainder > 0) {
       const row = document.createElement("div");
       row.className = "row-light centered";
@@ -159,7 +147,6 @@ async function fetchAndRenderSeats() {
       rowTracker++;
     }
 
-    // Full rows
     for (let r = 0; r < fullRowsCount; r++) {
       const row = document.createElement("div");
       row.className = "row-light";
@@ -190,9 +177,7 @@ async function fetchAndRenderSeats() {
   }
 }
 
-/**
- * 3) PRICE CALCULATION
- */
+
 function updatePriceCalculation() {
   if (!selectedSessionData) return;
   const isStudent = document.getElementById("isStudent").checked;
@@ -202,9 +187,6 @@ function updatePriceCalculation() {
   document.getElementById("totalPrice").textContent = total + " ₸";
 }
 
-/**
- * helpers: load widget script once
- */
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) return resolve();
@@ -219,9 +201,7 @@ function loadScriptOnce(src) {
 }
 
 async function openHalykPaymentWidget(auth, paymentObj) {
-  // Правильный домен из документации:
-  const widgetSrc = "https://test-epay.epayment.kz/payform/payment-api.js"; // TEST :contentReference[oaicite:1]{index=1}
-  // Для PROD обычно: "https://epay.epayment.kz/payform/payment-api.js"
+  const widgetSrc = "https://test-epay.epayment.kz/payform/payment-api.js"; 
 
   await loadScriptOnce(widgetSrc);
 
@@ -230,19 +210,13 @@ async function openHalykPaymentWidget(auth, paymentObj) {
     return;
   }
 
-  // На всякий случай — доклеим auth в объект
   paymentObj.auth = auth;
 
-  // Откроет форму оплаты (виджет сам рисует UI)
   window.halyk.showPaymentWidget(paymentObj, function (result) {
-    // result обычно { success: true/false }
     if (result && result.success) {
-      // можно редиректнуть на success page (или просто ждать backLink)
-      // window.location.href = "/static/pages/success.html";
       console.log("Payment success:", result);
     } else {
       console.log("Payment failed/cancelled:", result);
-      // window.location.href = "/static/pages/failure.html";
     }
   });
 }
@@ -263,7 +237,6 @@ async function bookTicket() {
   bookButton.textContent = 'PROCESSING...';
 
   try {
-    // 1) BOOK
     const bookRes = await authFetch('/book', {
       method: 'POST',
       body: JSON.stringify({
@@ -287,7 +260,6 @@ async function bookTicket() {
       return;
     }
 
-    // 2) PAY INIT
     const payRes = await authFetch('/pay/init', {
       method: 'POST',
       body: JSON.stringify({ order_id: orderId })
@@ -299,7 +271,6 @@ async function bookTicket() {
       return;
     }
 
-    // 3) OPEN HALYK WIDGET
     await openHalykPaymentWidget(payData.auth, payData.payment_obj);
 
   } catch (e) {
@@ -314,14 +285,11 @@ async function bookTicket() {
 
 document.addEventListener("DOMContentLoaded", loadSelectedSession);
 
-// optional: update price on checkbox change
 document.addEventListener("change", (e) => {
   if (e.target && e.target.id === "isStudent") updatePriceCalculation();
 });
 
-/**
- * 5) STYLES (your existing)
- */
+
 const styleNode = document.createElement("style");
 styleNode.textContent = `
   .seats-container { background: #fff !important; padding: 50px 20px; border-radius: 30px; box-shadow: 0 10px 50px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; overflow-x: auto; }

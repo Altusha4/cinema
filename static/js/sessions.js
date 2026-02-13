@@ -1,16 +1,6 @@
-/**
- * CinemaGo - Full Sessions Module
- * Разработано для Алтынай (AITU)
- * Функционал: Фильтрация, отрисовка 300+ мест, синхронизация с Booking
- */
-
-// 1. Глобальные переменные состояния
 let currentSessionId = null;
-let loadedSessions = []; // Кэш сеансов для мгновенной перерисовки
+let loadedSessions = []; 
 
-/**
- * 2. Применение фильтров и получение данных с сервера
- */
 async function applyFilters() {
     console.log("Applying search filters...");
 
@@ -19,7 +9,6 @@ async function applyFilters() {
     const maxPrice = document.getElementById('maxPrice').value;
     const onlyWithSeats = document.getElementById('onlyWithSeats').checked;
 
-    // Валидация даты
     if (!date) {
         if (typeof showNotification === 'function') {
             showNotification('Please select a date to find sessions', 'error');
@@ -27,12 +16,10 @@ async function applyFilters() {
         return;
     }
 
-    // Обновляем индикаторы поиска в Summary
     document.getElementById('currentCinema').textContent = cinema || 'All Cinemas';
     document.getElementById('currentDate').textContent = date;
 
     try {
-        // Формируем URL для Go-бэкенда
         let url = `/sessions?date=${date}`;
         if (cinema) url += `&cinema=${encodeURIComponent(cinema)}`;
         if (maxPrice) url += `&max_price=${maxPrice}`;
@@ -45,11 +32,9 @@ async function applyFilters() {
             throw new Error(sessions.error || 'Failed to fetch sessions');
         }
 
-        // Сохраняем результат в кэш и хранилище
         loadedSessions = sessions;
         saveSessionsToStorage(sessions);
 
-        // Отрисовываем карточки
         renderSessions(sessions);
 
         if (typeof showNotification === 'function') {
@@ -61,13 +46,10 @@ async function applyFilters() {
         if (typeof showNotification === 'function') {
             showNotification(error.message, 'error');
         }
-        renderSessions([]); // Очищаем список при ошибке
+        renderSessions([]); 
     }
 }
 
-/**
- * 3. Отрисовка карточек сеансов
- */
 function renderSessions(sessions) {
     const list = document.getElementById('sessionsList');
     const card = document.getElementById('sessionsCard');
@@ -81,7 +63,6 @@ function renderSessions(sessions) {
     sessionCount.textContent = count;
     if (sessionCountBadge) sessionCountBadge.textContent = `${count} Found`;
 
-    // Если ничего не нашли
     if (!Array.isArray(sessions) || sessions.length === 0) {
         list.innerHTML = `
             <div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 40px;">
@@ -92,7 +73,6 @@ function renderSessions(sessions) {
         return;
     }
 
-    // Проверяем текущий выбор из sessionStorage
     const saved = sessionStorage.getItem('selectedSession');
     const savedId = saved ? JSON.parse(saved).id : currentSessionId;
 
@@ -104,7 +84,6 @@ function renderSessions(sessions) {
         const hasSeats = seats.length > 0;
         const isSelected = savedId === session.id;
 
-        // Экранируем названия для безопасности в onclick
         const safeTitle = session.movie_title.replace(/'/g, "\\'");
         const safeCinema = session.cinema_name.replace(/'/g, "\\'");
 
@@ -152,13 +131,8 @@ function renderSessions(sessions) {
     });
 }
 
-/**
- * 4. Функция выбора (Select) и сохранения в Storage
- */
 function selectSession(id, title, cinema, time, price) {
     currentSessionId = id;
-
-    // Формируем объект для передачи на страницу Booking
     const sessionData = {
         id: id,
         title: title,
@@ -167,10 +141,7 @@ function selectSession(id, title, cinema, time, price) {
         price: price
     };
 
-    // Сохраняем в sessionStorage
     sessionStorage.setItem('selectedSession', JSON.stringify(sessionData));
-
-    // Обновляем плашку "Selected Session" в UI
     const movieEl = document.getElementById('selectedMovie');
     const cinemaEl = document.getElementById('selectedCinema');
     const timeEl = document.getElementById('selectedTime');
@@ -183,7 +154,6 @@ function selectSession(id, title, cinema, time, price) {
     if (priceEl) priceEl.textContent = formatPrice(price);
     if (infoBox) infoBox.style.display = 'block';
 
-    // Перерисовываем список сеансов для обновления кнопок
     renderSessions(loadedSessions);
 
     if (typeof showNotification === 'function') {
@@ -191,9 +161,7 @@ function selectSession(id, title, cinema, time, price) {
     }
 }
 
-/**
- * 5. Сброс текущего выбора
- */
+
 function clearSelection() {
     currentSessionId = null;
     sessionStorage.removeItem('selectedSession');
@@ -208,14 +176,10 @@ function clearSelection() {
     }
 }
 
-/**
- * 6. Утилиты
- */
 function saveSessionsToStorage(sessions) {
     sessionStorage.setItem('lastSessions', JSON.stringify(sessions));
 }
 
-// 7. СТИЛИ (Принудительная инъекция в Head)
 const extraStyle = document.createElement('style');
 extraStyle.textContent = `
     .sessions-list {

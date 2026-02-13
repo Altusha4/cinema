@@ -34,7 +34,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Email:    input.Email,
 		Username: input.Username,
 		Password: hash,
-		Role:     "user", // По умолчанию новый пользователь — обычный юзер
+		Role:     "user",
 	}
 
 	if err := models.CreateUser(user); err != nil {

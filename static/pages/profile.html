@@ -50,7 +50,6 @@
     <script src="/static/js/auth.js"></script>
 
     <script>
-        // Функция парсинга токена, если её нет в auth.js
         function parseJwt(token) {
             try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return null; }
         }
@@ -71,17 +70,14 @@
                 const data = await res.json();
                 const tickets = data.tickets || [];
 
-                // 1. Данные пользователя
                 const email = data.email || "User";
                 document.getElementById('sidebarEmail').textContent = email;
                 document.getElementById('sidebarName').textContent = email.split('@')[0];
                 document.getElementById('avatarLetter').textContent = email[0].toUpperCase();
 
-                // 2. Бонусы
                 document.getElementById('topBonuses').textContent = (data.total_bonuses || 0).toLocaleString() + " ₸";
                 document.getElementById('topTicketsCount').textContent = tickets.length;
 
-                // 3. Рендер билетов
                 if (tickets.length === 0) {
                     list.innerHTML = `
                         <div style="text-align:center; padding: 40px;">

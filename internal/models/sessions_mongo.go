@@ -13,19 +13,15 @@ import (
 )
 
 func AddSessionMongo(s Session) (Session, error) {
-	// 1. Генерируем ID
 	id, err := nextID("sessions")
 	if err != nil {
 		return Session{}, err
 	}
 	s.ID = id
 
-	// 2. СЧИТАЕМ МЕСТА: Если фронтенд прислал AvailableSeats,
-	// записываем их количество в TotalSeats
 	if len(s.AvailableSeats) > 0 {
 		s.TotalSeats = len(s.AvailableSeats)
 	} else {
-		// Дефолт, если вдруг фронтенд ничего не прислал
 		s.AvailableSeats = []string{"A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"}
 		s.TotalSeats = 9
 	}
@@ -33,7 +29,6 @@ func AddSessionMongo(s Session) (Session, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 3. Вставка в MongoDB
 	_, err = service.SessionsCollection().InsertOne(ctx, s)
 	if err != nil {
 		return Session{}, err
