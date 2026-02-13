@@ -5,6 +5,7 @@ import (
 	"cinema/internal/models"
 	"cinema/internal/service"
 	"encoding/json"
+
 	"fmt"
 	"io"
 	"log"
@@ -76,6 +77,8 @@ func main() {
 	mux.HandleFunc("/pay/callback", payCallbackHandler)
 	mux.HandleFunc("/pay/failure", payFailureHandler)
 	mux.HandleFunc("/pay/status", payStatusHandler)
+
+	mux.HandleFunc("/ai/chat", api.AIChatHandler)
 
 	fmt.Printf("🎬 CinemaGo Server running at http://localhost:%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
@@ -462,4 +465,13 @@ func makeInvoiceID(orderID string) string {
 		s = s[len(s)-15:]
 	}
 	return s
+}
+
+func parseDDMMYYYYToISO(date string) string {
+	// "12.02.2026" -> "2026-02-12"
+	t, err := time.Parse("02.01.2006", date)
+	if err != nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
 }

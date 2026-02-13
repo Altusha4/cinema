@@ -151,6 +151,7 @@
         <a href="/pages/sessions.html" class="nav-link user-only">Sessions</a>
         <a href="/pages/booking.html" class="nav-link user-only">Booking</a>
         <a href="/pages/profile.html" class="nav-link user-only" id="profileNavLink">Profile</a>
+        <a href="/pages/ai.html" class="nav-link">AI Assistant</a>
         <a href="/pages/admin.html" id="adminNavLink" class="nav-link" style="display:none;">Admin</a>
     </div>
     <div class="auth-buttons">
@@ -208,14 +209,7 @@
             </div>
         </div>
 
-        <details style="margin-top: 30px; cursor: pointer; border: 1px solid var(--color-primary); border-radius: 12px; padding: 10px;">
-            <summary style="font-size: 0.85rem; color: var(--color-muted); font-weight: 600;">👨‍💻 Developer Tools</summary>
-            <pre id="movieJson" style="font-size: 0.8rem; margin-top: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
-        </details>
-
-        <div id="searchPlaceholder" style="text-align: center; padding: 60px 20px; color: var(--color-muted);">
-            <p style="font-size: 1.2rem; margin: 0;">Enter a keyword above to explore our cinema library.</p>
-        </div>
+        
     </div>
 
     <div class="card" style="overflow: hidden; border-width: 3px;">
@@ -367,5 +361,8 @@
         window.location.href = "/pages/auth.html";
     }
 </script>
+
+<script src="/static/js/aiChat.js"></script>
+
 </body>
 </html>
