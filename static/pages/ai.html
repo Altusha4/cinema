@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CinemaGo | AI Assistant</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    .chat-wrap{max-width:900px;margin:30px auto;padding:20px}
+    .chat-card{background:#111;border-radius:16px;padding:18px;border:1px solid #222}
+    .chat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .chat-title{font-weight:800;font-size:1.2rem;color:#8ee4af}
+    .chat-box{height:420px;overflow:auto;background:#0b0b0b;border:1px solid #222;border-radius:14px;padding:14px}
+    .msg{display:flex;margin:10px 0}
+    .bubble{max-width:78%;padding:10px 12px;border-radius:14px;line-height:1.35;font-size:.95rem;white-space:pre-wrap}
+    .me{justify-content:flex-end}
+    .me .bubble{background:#379683;color:#fff}
+    .bot{justify-content:flex-start}
+    .bot .bubble{background:#1a1a1a;color:#eaeaea;border:1px solid #2a2a2a}
+    .chat-input{display:flex;gap:10px;margin-top:12px}
+    .chat-input input{flex:1;height:48px;border-radius:12px;border:1px solid #222;background:#0b0b0b;color:#fff;padding:0 14px}
+    .chat-input button{height:48px;border-radius:12px;padding:0 18px;font-weight:800;cursor:pointer}
+    .hint{opacity:.7;font-size:.85rem;margin-top:10px}
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="logo">🎬 CinemaGo</a>
+  <div class="nav-links" id="mainNavLinks">
+    <a href="/" class="nav-link">Home</a>
+        <a href="/pages/index.html" class="nav-link">Search</a>
+        <a href="/pages/sessions.html" class="nav-link user-only">Sessions</a>
+        <a href="/pages/booking.html" class="nav-link user-only">Booking</a>
+        <a href="/pages/profile.html" class="nav-link user-only" id="profileNavLink">Profile</a>
+        <a href="/pages/ai.html" class="nav-link">AI Assistant</a>
+
+        <a href="/pages/admin.html" id="adminNavLink" class="nav-link" style="display:none;">Admin</a>
+  </div>
+  <div class="auth-buttons">
+    <button id="loginBtn" class="secondary" onclick="location.href='/pages/auth.html'">Login</button>
+    <button id="logoutBtn" class="secondary" onclick="logout()" style="display:none;">Logout</button>
+  </div>
+</nav>
+
+<main class="chat-wrap">
+  <div class="chat-card">
+    <div class="chat-header">
+      <div class="chat-title">🤖 CinemaGo AI Assistant</div>
+      <button class="secondary" onclick="clearChat()">Clear</button>
+    </div>
+
+    <div id="chatBox" class="chat-box"></div>
+
+    <div class="chat-input">
+      <input id="chatInput" type="text" placeholder="Ask: How to book a seat? How does discount work?…" />
+      <button class="btn-shine" id="sendBtn" onclick="sendMsg()">Send</button>
+    </div>
+
+    <div class="hint">Tip: Press Enter to send.</div>
+  </div>
+</main>
+
+<script src="/static/js/navbar.js"></script>
+<script src="/static/js/ai.js"></script>
+<script>
+  function logout(){ localStorage.clear(); location.href="/pages/auth.html"; }
+</script>
+</body>
+</html>
