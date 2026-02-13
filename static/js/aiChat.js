@@ -78,7 +78,6 @@ function createAIWidget() {
 
     try {
       const data = await aiSendMessage(text);
-      // replace last "Thinking..."
       const msgs = document.getElementById("aiMessages");
       msgs.lastChild.innerHTML = `<b>AI:</b> ${data.reply}`;
     } catch (e) {

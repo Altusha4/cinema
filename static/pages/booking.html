@@ -15,7 +15,7 @@
             border-radius: 20px;
             margin: 20px 0;
             text-align: center;
-            overflow-x: auto; /* Для мобильных устройств */
+            overflow-x: auto;
         }
 
         .cinema-screen {
@@ -32,7 +32,6 @@
             text-transform: uppercase;
         }
 
-        /* ИСПРАВЛЕННАЯ СЕТКА: Ровно 10 колонок для рядов A, B, C... */
         .dynamic-seats-grid {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -42,7 +41,7 @@
         }
 
         .seat-node {
-            aspect-ratio: 1/1; /* Квадратные места */
+            aspect-ratio: 1/1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -74,7 +73,6 @@
             opacity: 0.6;
         }
 
-        /* --- СТИЛЬ БИЛЕТА --- */
         #captureTicket {
             width: 360px;
             background: white;
@@ -201,7 +199,6 @@
 <script src="/static/js/navbar.js"></script>
 <script src="/static/js/booking.js"></script>
 <script>
-    // Твой скрипт без изменений
     function parseJwt(token) {
         try {
             const base64Url = token.split('.')[1];

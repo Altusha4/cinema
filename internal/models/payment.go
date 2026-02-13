@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive" // Добавляем этот импорт
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type PaymentStatus string
@@ -15,12 +15,9 @@ const (
 )
 
 type Payment struct {
-	// Рекомендую тоже использовать ObjectID для ID самого платежа
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	InvoiceID string             `bson:"invoice_id" json:"invoice_id"`
-
-	// ГЛАВНОЕ ИСПРАВЛЕНИЕ: теперь OrderID совпадает по типу с Order.ID
-	OrderID primitive.ObjectID `bson:"order_id" json:"order_id"`
+	OrderID   primitive.ObjectID `bson:"order_id" json:"order_id"`
 
 	Amount   float64       `bson:"amount" json:"amount"`
 	Currency string        `bson:"currency" json:"currency"`

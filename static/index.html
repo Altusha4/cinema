@@ -86,7 +86,6 @@
         const userRole = payload ? (payload.role || "user") : "user";
         const currentPath = window.location.pathname;
 
-        // --- ЛОГИКА ДЛЯ АДМИНА ---
         if (userRole === "admin") {
             const isDashboard = currentPath === "/" || currentPath === "/index.html";
 
@@ -96,7 +95,6 @@
                 return;
             }
 
-            // Настройка навбара для админа
             const navLinks = document.getElementById('mainNavLinks');
             if (navLinks) {
                 navLinks.innerHTML = `
@@ -105,20 +103,16 @@
                 `;
             }
 
-            // Только админ может запрашивать общие заказы
             fetchRecentOrders();
         }
 
-        // --- ЛОГИКА ДЛЯ ЮЗЕРА ---
         if (userRole !== "admin") {
             if (payload && payload.username) {
                 document.getElementById("userName").textContent = payload.username;
             }
 
-            // Прячем секцию общих заказов от греха подальше (чтобы не было 403)
             document.getElementById("ordersSection").style.display = "none";
 
-            // Подсветка активной ссылки
             document.querySelectorAll('.nav-link').forEach(link => {
                 if (link.getAttribute('href') === currentPath) {
                     link.classList.add('active');

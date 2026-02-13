@@ -11,7 +11,7 @@ type contextKey string
 
 const (
 	RoleKey  contextKey = "role"
-	EmailKey contextKey = "email" // Добавляем это
+	EmailKey contextKey = "email"
 )
 
 func AuthMiddleware(next http.Handler) http.Handler {
@@ -34,14 +34,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
-
-		// --- ВОТ ЭТО МЕСТО НУЖНО ИЗМЕНИТЬ ---
-		// Сначала кладем роль
 		ctx := context.WithValue(r.Context(), RoleKey, claims.Role)
-		// Затем в этот же контекст добавляем email
 		ctx = context.WithValue(ctx, EmailKey, claims.Email)
 
-		// Передаем обновленный ctx дальше
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

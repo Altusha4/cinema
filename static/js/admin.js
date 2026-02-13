@@ -1,4 +1,3 @@
-// 1. Проверка доступа (Admin Only)
 (function checkAdminAccess() {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -15,7 +14,6 @@
     }
 })();
 
-// 2. Универсальный fetch с авторизацией
 async function authFetch(url, options = {}) {
     const token = localStorage.getItem("token");
     const headers = {
@@ -28,7 +26,6 @@ async function authFetch(url, options = {}) {
     return fetch(url, { ...options, headers });
 }
 
-// 3. Инициализация данных
 document.addEventListener('DOMContentLoaded', loadAdminData);
 
 async function loadAdminData() {
@@ -40,29 +37,23 @@ async function loadAdminData() {
     ]);
 }
 
-// 4. Загрузка статистики
 async function loadStatistics() {
     try {
         const ordersRes = await authFetch('/orders');
         const orders = ordersRes.ok ? await ordersRes.json() : [];
-
-        // Считаем выручку
         const totalRevenue = orders.reduce((sum, order) => sum + (order.final_price || 0), 0);
-
         const totalOrdersEl = document.getElementById('totalOrders');
         const revenueEl = document.getElementById('revenue');
 
         if(totalOrdersEl) totalOrdersEl.textContent = orders.length;
         if(revenueEl) revenueEl.textContent = totalRevenue.toLocaleString() + " ₸";
 
-        // Получаем все сессии для счетчика
         const sessionsRes = await fetch(`/sessions?date=all`);
         const sessions = sessionsRes.ok ? await sessionsRes.json() : [];
 
         const totalSessionsEl = document.getElementById('totalSessions');
         if(totalSessionsEl) totalSessionsEl.textContent = sessions.length;
 
-        // Имитируем количество фильмов на основе уникальных названий в сессиях
         const uniqueMovies = [...new Set(sessions.map(s => s.movie_title))];
         const totalMoviesEl = document.getElementById('totalMovies');
         if(totalMoviesEl) totalMoviesEl.textContent = uniqueMovies.length;
@@ -72,10 +63,8 @@ async function loadStatistics() {
     }
 }
 
-// 5. Управление сессиями
 async function loadSessionsForAdmin() {
     try {
-        // Запрашиваем "all", чтобы видеть созданные сессии на любую дату
         const res = await fetch(`/sessions?date=all`);
         const sessions = await res.json();
         renderAdminSessions(sessions);
@@ -93,7 +82,6 @@ function renderAdminSessions(sessions) {
         return;
     }
 
-    // Сортировка: новые/будущие сверху
     const sortedSessions = sessions.sort((a, b) => {
         const dateA = new Date(a.start_time?.$date || a.start_time);
         const dateB = new Date(b.start_time?.$date || b.start_time);
@@ -120,7 +108,6 @@ function renderAdminSessions(sessions) {
     }).join('');
 }
 
-// 6. Управление заказами
 async function loadOrdersForAdmin() {
     try {
         const res = await authFetch('/orders');
@@ -153,7 +140,6 @@ function renderAdminOrders(orders) {
     `).join('');
 }
 
-// 7. Создание новой сессии (С ЛОГИКОЙ РЯДОВ)
 async function createSession() {
     const movieTitle = document.getElementById('movieTitle').value.trim();
     const cinemaName = document.getElementById('cinemaName').value;
@@ -161,7 +147,6 @@ async function createSession() {
     const startTime = document.getElementById('startTime').value;
     const basePrice = parseFloat(document.getElementById('basePrice').value);
 
-    // ПРОВЕРКА: Получаем количество мест из нового инпута
     const seatCountInput = document.getElementById('seatCount');
     if (!seatCountInput) {
         alert("System error: 'seatCount' input not found in HTML!");
@@ -172,8 +157,7 @@ async function createSession() {
     const generatedSeats = [];
     const rows = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-    // ГЕНЕРАЦИЯ: Ряды по 10 мест
-    // Если seatCount = 45, создаст A1-A10, B1-B10, C1-C10, D1-D10, E1-E5
+
     for (let i = 0; i < seatCount; i++) {
         const rowIdx = Math.floor(i / 10);
         const seatNum = (i % 10) + 1;
@@ -191,7 +175,7 @@ async function createSession() {
         hall: hall || "hall 1",
         start_time: new Date(startTime).toISOString(),
         base_price: basePrice,
-        available_seats: generatedSeats, // Здесь теперь точно нужный массив
+        available_seats: generatedSeats,
         movie_id: 0
     };
 
@@ -206,7 +190,6 @@ async function createSession() {
         if (response.ok) {
             alert(`✨ Success! Session created with ${generatedSeats.length} seats.`);
             loadAdminData();
-            // Сброс формы
             document.getElementById('movieTitle').value = '';
             document.getElementById('startTime').value = '';
             document.getElementById('hall').value = '';
@@ -219,7 +202,6 @@ async function createSession() {
     }
 }
 
-// 8. Удаление сессии
 async function deleteSession(sessionId) {
     if (!confirm(`Delete session #${sessionId}?`)) return;
     try {

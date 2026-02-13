@@ -1,14 +1,8 @@
-// Общие утилиты и навигация
-
-// Текущая активная сессия для бронирования
 let currentSession = null;
 
-// Навигация между страницами
 function navigateTo(page) {
     window.location.href = `/pages/${page}.html`;
 }
-
-// Показать/скрыть уведомление
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -33,7 +27,6 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Стили для анимаций уведомлений
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -47,12 +40,10 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Валидация email
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Форматирование даты
 function formatDateTime(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -65,7 +56,6 @@ function formatDateTime(dateString) {
     });
 }
 
-// Форматирование цены
 function formatPrice(price) {
     return `${price} ₸`;
 }

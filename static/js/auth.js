@@ -198,7 +198,6 @@ function checkAuth() {
     const adminNavLink = document.getElementById("adminNavLink");
 
     if (token) {
-        // Пользователь залогинен - ПРОВЕРЯЕМ наличие кнопок перед изменением стиля
         if (loginBtn) loginBtn.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "block";
         
@@ -211,7 +210,6 @@ function checkAuth() {
             adminNavLink.style.display = "inline-block";
         }
     } else {
-        // Пользователь не залогинен
         if (loginBtn) loginBtn.style.display = "block";
         if (logoutBtn) logoutBtn.style.display = "none";
         
@@ -221,5 +219,4 @@ function checkAuth() {
     }
 }
 
-// Вызывай эту функцию при загрузке страницы
 document.addEventListener("DOMContentLoaded", checkAuth);

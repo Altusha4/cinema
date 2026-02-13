@@ -12,7 +12,7 @@ async function authFetch(url, options = {}) {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            ...(options.headers || {}) // Позволяет переопределять заголовки при необходимости
+            ...(options.headers || {})
         }
     };
 

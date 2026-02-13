@@ -15,7 +15,6 @@ function addMessage(role, text){
   box.appendChild(row);
   box.scrollTop = box.scrollHeight;
 
-  // save
   const current = loadChat();
   current.push({ role, text });
   localStorage.setItem(CHAT_KEY, JSON.stringify(current));
@@ -35,7 +34,6 @@ function renderChat(){
     return;
   }
   for(const m of items){
-    // do not re-save while rendering
     const row = document.createElement("div");
     row.className = "msg " + (m.role === "me" ? "me" : "bot");
     const bubble = document.createElement("div");

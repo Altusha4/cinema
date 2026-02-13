@@ -57,7 +57,6 @@ func main() {
 		}
 		http.ServeFile(w, r, "./static/index.html")
 	})
-	// Внутри func main()
 	mux.Handle("/user/tickets", service.AuthMiddleware(http.HandlerFunc(getUserTicketsHandler)))
 
 	mux.HandleFunc("/movies", getMovieHandler)
@@ -279,7 +278,6 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Изменяем тип order_id на string, так как ObjectID приходит как строка
 	var in struct {
 		OrderID string `json:"order_id"`
 	}
@@ -288,14 +286,12 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Конвертируем строку из JSON в ObjectID для поиска в Mongo
 	objID, err := primitive.ObjectIDFromHex(in.OrderID)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid order_id format"})
 		return
 	}
 
-	// 3. Используем objID для поиска
 	order, ok, err := models.GetOrderByIDMongo(objID)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
@@ -306,7 +302,6 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Генерируем invoiceID на основе строкового представления ID
 	invoiceID := makeInvoiceID(order.ID.Hex())
 
 	secretHash, err := service.RandomSecretHash()
@@ -327,9 +322,8 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Сохраняем платеж (убедись, что в модели Payment OrderID теперь тоже primitive.ObjectID)
 	_, _ = models.CreatePaymentMongo(models.Payment{
-		OrderID:    order.ID, // Теперь это ObjectID
+		OrderID:    order.ID,
 		InvoiceID:  invoiceID,
 		Amount:     order.FinalPrice,
 		Currency:   "KZT",
@@ -343,7 +337,6 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// epay отправляет JSON в postLink (пример есть в доке) :contentReference[oaicite:5]{index=5}
 func payCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 
@@ -371,12 +364,11 @@ func payCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	if code == "ok" {
 		_ = models.MarkPaymentPaidMongo(invoiceID, epayID, cb)
-		_ = models.MarkOrderPaidMongo(p.OrderID) // если нет — скажи, добавлю под ваш Order
+		_ = models.MarkOrderPaidMongo(p.OrderID)
 	} else {
 		_ = models.MarkPaymentFailedMongo(invoiceID, cb)
 	}
 
-	// EPAY обычно ждёт просто 200 OK
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("OK"))
 }
@@ -385,16 +377,11 @@ func getUserTicketsHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "GET only"})
 		return
 	}
-
-	// Твой AuthMiddleware должен сохранять email или userID в контексте.
-	// Если он сохраняет email, достаем его так:
 	userEmail, ok := r.Context().Value("email").(string)
 	if !ok || userEmail == "" {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "User email not found in context"})
 		return
 	}
-
-	// Вызываем модель для поиска заказов по Email
 	orders, err := models.GetOrdersByEmailMongo(userEmail)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -404,25 +391,19 @@ func getUserTicketsHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, orders)
 }
 
-// Реализация обработчика
 func getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
-	// Получаем email из контекста (его туда кладет AuthMiddleware после проверки JWT)
 	email, _ := r.Context().Value(service.EmailKey).(string)
-
-	// 1. Тянем все заказы пользователя из коллекции "orders" базы "cinema"
 	orders, err := models.GetOrdersByEmailMongo(email)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": "Cant fetch orders"})
 		return
 	}
 
-	// 2. Считаем общие бонусы
 	totalBonuses := 0.0
 	for _, o := range orders {
 		totalBonuses += float64(o.BonusesEarned)
 	}
 
-	// 3. Отдаем агрегированные данные
 	writeJSON(w, 200, map[string]any{
 		"email":         email,
 		"total_bonuses": totalBonuses,
@@ -432,7 +413,6 @@ func getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func payFailureHandler(w http.ResponseWriter, r *http.Request) {
-	// иногда failure приходит сюда; обработаем как failed
 	body, _ := io.ReadAll(r.Body)
 	var cb map[string]any
 	_ = json.Unmarshal(body, &cb)
@@ -464,11 +444,7 @@ func payStatusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func makeInvoiceID(orderID string) string {
-	// Нам больше не нужно %06d, так как orderID — это строка типа "65cb7..."
 	s := orderID
-
-	// Epay (Halyk) обычно требует, чтобы invoiceID был не слишком длинным (до 15-20 символов)
-	// Если ObjectID слишком длинный, берем последние 15 символов
 	if len(s) > 15 {
 		s = s[len(s)-15:]
 	}
@@ -476,7 +452,6 @@ func makeInvoiceID(orderID string) string {
 }
 
 func parseDDMMYYYYToISO(date string) string {
-	// "12.02.2026" -> "2026-02-12"
 	t, err := time.Parse("02.01.2006", date)
 	if err != nil {
 		return ""
