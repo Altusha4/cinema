@@ -41,8 +41,24 @@ func AddSessionMongo(s Session) (Session, error) {
 	return s, nil
 }
 
-// Функции GetSessionByIDMongo и FilterSessionsMongo остаются без изменений,
-// так как в них ошибок не было (FilterSessionsMongo мы уже поправили под "all").
+func GetAllSessionsMongo() ([]Session, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	coll := service.MongoDB.Collection("sessions")
+
+	cur, err := coll.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var sessions []Session
+	if err := cur.All(ctx, &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
 
 func GetSessionByIDMongo(id int) (Session, bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
