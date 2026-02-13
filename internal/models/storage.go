@@ -95,7 +95,6 @@ func SaveOrder(o Order) Order {
 	mu.Lock()
 	defer mu.Unlock()
 
-	o.ID = nextOrderID
 	nextOrderID++
 
 	orders = append(orders, o)

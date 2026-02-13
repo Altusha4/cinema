@@ -9,7 +9,10 @@ import (
 
 type contextKey string
 
-const RoleKey contextKey = "role"
+const (
+	RoleKey  contextKey = "role"
+	EmailKey contextKey = "email" // Добавляем это
+)
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +35,13 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// --- ВОТ ЭТО МЕСТО НУЖНО ИЗМЕНИТЬ ---
+		// Сначала кладем роль
 		ctx := context.WithValue(r.Context(), RoleKey, claims.Role)
+		// Затем в этот же контекст добавляем email
+		ctx = context.WithValue(ctx, EmailKey, claims.Email)
+
+		// Передаем обновленный ctx дальше
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

@@ -190,3 +190,36 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 });
+function checkAuth() {
+    const token = localStorage.getItem("token");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userOnlyLinks = document.querySelectorAll(".user-only");
+    const adminNavLink = document.getElementById("adminNavLink");
+
+    if (token) {
+        // Пользователь залогинен - ПРОВЕРЯЕМ наличие кнопок перед изменением стиля
+        if (loginBtn) loginBtn.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "block";
+        
+        userOnlyLinks.forEach(link => {
+            if (link) link.style.display = "inline-block";
+        });
+        
+        const payload = parseJwt(token);
+        if (payload && payload.role === "admin" && adminNavLink) {
+            adminNavLink.style.display = "inline-block";
+        }
+    } else {
+        // Пользователь не залогинен
+        if (loginBtn) loginBtn.style.display = "block";
+        if (logoutBtn) logoutBtn.style.display = "none";
+        
+        userOnlyLinks.forEach(link => {
+            if (link) link.style.display = "none";
+        });
+    }
+}
+
+// Вызывай эту функцию при загрузке страницы
+document.addEventListener("DOMContentLoaded", checkAuth);

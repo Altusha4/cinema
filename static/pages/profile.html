@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | CinemaGo</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="profile-page">
+
+    <nav class="navbar">
+        <a href="/" class="logo"><span>🎬</span> CinemaGo</a>
+        <div class="nav-links" id="navLinks">
+            <a href="/" class="nav-link">Movies</a>
+            <a href="/pages/profile.html" class="nav-link active user-only">My Profile</a>
+            <a href="/pages/admin.html" class="nav-link admin-only" style="display: none;">Admin Panel</a>
+            <a href="#" id="logoutBtn" class="nav-link" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-grid" style="margin-top: 20px;">
+        <aside class="card" style="text-align: center; height: fit-content;">
+            <div class="avatar-placeholder" id="avatarLetter">U</div>
+            <h2 id="sidebarName" style="color: var(--color-dark); margin-bottom: 5px;">Loading...</h2>
+            <p id="sidebarEmail" class="helper-text">...</p>
+
+            <div class="stat-item" style="margin: 20px 0;">
+                <span class="helper-text">MY BONUSES</span>
+                <span class="stat-value" id="topBonuses">0 ₸</span>
+            </div>
+
+            <div class="stat-item">
+                <span class="helper-text">TICKETS BOUGHT</span>
+                <span class="stat-value" id="topTicketsCount">0</span>
+            </div>
+        </aside>
+
+        <main class="card">
+            <h3 style="border-bottom: 2px solid var(--color-primary); padding-bottom: 15px; margin-bottom: 25px;">
+                🎟 My Active Tickets
+            </h3>
+            
+            <div id="ticketsList">
+                <div class="loader">Loading your cinematic history...</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/authFetch.js"></script>
+    <script src="/static/js/auth.js"></script>
+
+    <script>
+        // Функция парсинга токена, если её нет в auth.js
+        function parseJwt(token) {
+            try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return null; }
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const token = localStorage.getItem("token");
+            const list = document.getElementById('ticketsList');
+            
+            if (!token) {
+                window.location.href = "/pages/auth.html";
+                return;
+            }
+
+            try {
+                const res = await authFetch('/user/profile');
+                if (!res.ok) throw new Error("Status: " + res.status);
+
+                const data = await res.json();
+                const tickets = data.tickets || [];
+
+                // 1. Данные пользователя
+                const email = data.email || "User";
+                document.getElementById('sidebarEmail').textContent = email;
+                document.getElementById('sidebarName').textContent = email.split('@')[0];
+                document.getElementById('avatarLetter').textContent = email[0].toUpperCase();
+
+                // 2. Бонусы
+                document.getElementById('topBonuses').textContent = (data.total_bonuses || 0).toLocaleString() + " ₸";
+                document.getElementById('topTicketsCount').textContent = tickets.length;
+
+                // 3. Рендер билетов
+                if (tickets.length === 0) {
+                    list.innerHTML = `
+                        <div style="text-align:center; padding: 40px;">
+                            <p class="helper-text">You haven't booked any movies yet.</p>
+                            <a href="/" class="nav-link active" style="display:inline-block; margin-top:10px;">Go to Movies</a>
+                        </div>`;
+                    return;
+                }
+
+                list.innerHTML = tickets.map(t => {
+                    const status = t.payment_status || t.PaymentStatus || 'pending';
+                    const isPaid = status === 'paid';
+                    
+                    return `
+                    <div class="session-card" style="margin-bottom: 15px; justify-content: space-between;">
+                        <div>
+                            <span class="status-badge" style="background: ${isPaid ? 'var(--color-dark)' : '#f39c12'}">
+                                ${isPaid ? 'CONFIRMED' : 'RESERVED'}
+                            </span>
+                            <h4 style="margin: 10px 0 5px; color: var(--color-dark); font-size: 1.2rem;">
+                                ${t.movie_title || t.MovieTitle || 'Movie'}
+                            </h4>
+                            <div class="helper-text">
+                                Promo: <span style="font-family: monospace; font-weight: bold;">${t.promo_code || 'NONE'}</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 800; font-size: 1.3rem; color: var(--color-dark);">
+                                ${(t.final_price || 0).toLocaleString()} ₸
+                            </div>
+                            <div style="color: var(--color-accent); font-size: 0.85rem; font-weight: bold;">
+                                +${t.bonuses_earned || 0} bonuses
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = "<p style='color:red; text-align:center;'>Failed to load profile. Please log in again.</p>";
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "/pages/auth.html";
+        }
+    </script>
+</body>
+</html>
