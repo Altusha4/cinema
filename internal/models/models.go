@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Movie struct {
 	ID          int     `json:"id" bson:"id"`
@@ -30,11 +34,11 @@ type Session struct {
 }
 
 type Order struct {
-	ID            int     `json:"id" bson:"id"`
-	CustomerEmail string  `json:"customer_email" bson:"customer_email"`
-	MovieTitle    string  `json:"movie_title" bson:"movie_title"`
-	FinalPrice    float64 `json:"final_price" bson:"final_price"`
-
-	PromoCode     string `json:"promo_code" bson:"promo_code"`
-	BonusesEarned int    `json:"bonuses_earned" bson:"bonuses_earned"`
+	// Используем ObjectID, чтобы Mongo и Go понимали друг друга
+	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	CustomerEmail string             `json:"customer_email" bson:"customer_email"`
+	MovieTitle    string             `json:"movie_title" bson:"movie_title"`
+	FinalPrice    float64            `json:"final_price" bson:"final_price"`
+	PromoCode     string             `json:"promo_code" bson:"promo_code"`
+	BonusesEarned int                `json:"bonuses_earned" bson:"bonuses_earned"`
 }

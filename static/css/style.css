@@ -647,3 +647,60 @@ body.admin-mode .nav-links a:not(.admin-link) {
     color: #999;
     cursor: not-allowed;
 }
+.profile-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.user-card {
+    background: white;
+    padding: 30px;
+    border-radius: 25px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    background: var(--color-primary, #379683);
+    color: white;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.ticket-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    transition: 0.3s;
+}
+
+.ticket-card:hover {
+    transform: translateX(5px);
+    border-color: #379683;
+}
+
+.ticket-status {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 10px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    text-transform: uppercase;
+    font-weight: bold;
+}

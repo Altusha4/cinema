@@ -15,3 +15,5 @@ go.work.sum
 Thumbs.db
 cinema.iml
 .env
+node_modules/
+*.exe

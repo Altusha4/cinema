@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -55,6 +56,8 @@ func main() {
 		}
 		http.ServeFile(w, r, "./static/index.html")
 	})
+	// Внутри func main()
+	mux.Handle("/user/tickets", service.AuthMiddleware(http.HandlerFunc(getUserTicketsHandler)))
 
 	mux.HandleFunc("/movies", getMovieHandler)
 	mux.HandleFunc("/login", api.LoginHandler)
@@ -67,6 +70,7 @@ func main() {
 	mux.Handle("/orders", service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(listOrdersHandler))))
 
 	mux.Handle("/sessions/", service.AuthMiddleware(service.AdminMiddleware(http.HandlerFunc(deleteSessionHandler))))
+	mux.Handle("/user/profile", service.AuthMiddleware(http.HandlerFunc(getUserProfileHandler)))
 
 	mux.HandleFunc("/pay/init", payInitHandler)
 	mux.HandleFunc("/pay/callback", payCallbackHandler)
@@ -264,17 +268,24 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ожидаем order_id
+	// 1. Изменяем тип order_id на string, так как ObjectID приходит как строка
 	var in struct {
-		OrderID int `json:"order_id"`
+		OrderID string `json:"order_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.OrderID == 0 {
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.OrderID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "order_id is required"})
 		return
 	}
 
-	// найди заказ (у тебя уже есть orders в Mongo)
-	order, ok, err := models.GetOrderByIDMongo(in.OrderID) // если у тебя нет — скажи, я под твои функции перепишу
+	// 2. Конвертируем строку из JSON в ObjectID для поиска в Mongo
+	objID, err := primitive.ObjectIDFromHex(in.OrderID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid order_id format"})
+		return
+	}
+
+	// 3. Используем objID для поиска
+	order, ok, err := models.GetOrderByIDMongo(objID)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
 		return
@@ -284,7 +295,9 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	invoiceID := makeInvoiceID(in.OrderID)
+	// 4. Генерируем invoiceID на основе строкового представления ID
+	invoiceID := makeInvoiceID(order.ID.Hex())
+
 	secretHash, err := service.RandomSecretHash()
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": err.Error()})
@@ -303,8 +316,9 @@ func payInitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 5. Сохраняем платеж (убедись, что в модели Payment OrderID теперь тоже primitive.ObjectID)
 	_, _ = models.CreatePaymentMongo(models.Payment{
-		OrderID:    order.ID,
+		OrderID:    order.ID, // Теперь это ObjectID
 		InvoiceID:  invoiceID,
 		Amount:     order.FinalPrice,
 		Currency:   "KZT",
@@ -355,6 +369,56 @@ func payCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("OK"))
 }
+func getUserTicketsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "GET only"})
+		return
+	}
+
+	// Твой AuthMiddleware должен сохранять email или userID в контексте.
+	// Если он сохраняет email, достаем его так:
+	userEmail, ok := r.Context().Value("email").(string)
+	if !ok || userEmail == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "User email not found in context"})
+		return
+	}
+
+	// Вызываем модель для поиска заказов по Email
+	orders, err := models.GetOrdersByEmailMongo(userEmail)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, orders)
+}
+
+// Реализация обработчика
+func getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
+	// Получаем email из контекста (его туда кладет AuthMiddleware после проверки JWT)
+	email, _ := r.Context().Value(service.EmailKey).(string)
+
+	// 1. Тянем все заказы пользователя из коллекции "orders" базы "cinema"
+	orders, err := models.GetOrdersByEmailMongo(email)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "Cant fetch orders"})
+		return
+	}
+
+	// 2. Считаем общие бонусы
+	totalBonuses := 0.0
+	for _, o := range orders {
+		totalBonuses += float64(o.BonusesEarned)
+	}
+
+	// 3. Отдаем агрегированные данные
+	writeJSON(w, 200, map[string]any{
+		"email":         email,
+		"total_bonuses": totalBonuses,
+		"tickets_count": len(orders),
+		"tickets":       orders,
+	})
+}
 
 func payFailureHandler(w http.ResponseWriter, r *http.Request) {
 	// иногда failure приходит сюда; обработаем как failed
@@ -388,9 +452,12 @@ func payStatusHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, p)
 }
 
-func makeInvoiceID(orderID int) string {
-	s := fmt.Sprintf("%06d", orderID)
+func makeInvoiceID(orderID string) string {
+	// Нам больше не нужно %06d, так как orderID — это строка типа "65cb7..."
+	s := orderID
 
+	// Epay (Halyk) обычно требует, чтобы invoiceID был не слишком длинным (до 15-20 символов)
+	// Если ObjectID слишком длинный, берем последние 15 символов
 	if len(s) > 15 {
 		s = s[len(s)-15:]
 	}
