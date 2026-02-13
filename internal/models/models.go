@@ -41,4 +41,12 @@ type Order struct {
 	FinalPrice    float64            `json:"final_price" bson:"final_price"`
 	PromoCode     string             `json:"promo_code" bson:"promo_code"`
 	BonusesEarned int                `json:"bonuses_earned" bson:"bonuses_earned"`
+
+	SessionID  int       `bson:"session_id" json:"session_id"`
+	CinemaName string    `bson:"cinema_name" json:"cinema_name"`
+	Hall       string    `bson:"hall" json:"hall"`
+	StartTime  time.Time `bson:"start_time" json:"start_time"`
+	Seat       string    `bson:"seat" json:"seat"`
+
+	PaymentStatus string `bson:"payment_status" json:"payment_status"`
 }

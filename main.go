@@ -165,6 +165,14 @@ func createBookingHandler(w http.ResponseWriter, r *http.Request) {
 		FinalPrice:    finalPrice,
 		PromoCode:     service.GeneratePromoCode(),
 		BonusesEarned: service.CalcBonuses(finalPrice),
+
+		SessionID:  input.SessionID,
+		CinemaName: session.CinemaName,
+		Hall:       session.Hall,
+		StartTime:  session.StartTime,
+		Seat:       input.Seat,
+
+		PaymentStatus: "reserved",
 	}
 	saved, _ := models.SaveOrderMongo(order)
 	service.SendAsyncNotification(saved.CustomerEmail, saved.MovieTitle, saved.PromoCode)
